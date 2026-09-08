@@ -126,7 +126,7 @@ int main(void)
     APP_ERROR_CHECK(error);
     NRF_LOG_DEFAULT_BACKENDS_INIT();
 
-	#if 1  /* ==== 测试用：写入固定 SN 到 Flash ==== */
+	#if 0  /* ==== 测试用：写入固定 SN 到 Flash ==== */
     /* 测试步骤：
      *   1. 编译运行此版本，RTT 应打印 "Capsule SN written to Flash"
      *   2. 烧录后重启（重新上电或按 Reset），应看到 "using Flash-bound SN"
