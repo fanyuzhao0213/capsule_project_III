@@ -7,13 +7,26 @@
  */
 
 #include "uart_bridge.h"
+#include "binding_storage.h"
 #include "config.h"
 #include "image.h"
+#include "legacy_protocol.h"
 #include "nrf.h"
 #include "nrf_gpio.h"
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
+#include <string.h>
 
+#define CONTROL_DEBUG_LOG_ENABLED 1
+#define UART_IDLE_PPI_RX_CHANNEL       7u
+
+#if CONTROL_DEBUG_LOG_ENABLED
+#define CONTROL_LOG_INFO(...)    NRF_LOG_INFO(__VA_ARGS__)
+#define CONTROL_LOG_WARNING(...) NRF_LOG_WARNING(__VA_ARGS__)
+#else
+#define CONTROL_LOG_INFO(...)
+#define CONTROL_LOG_WARNING(...)
+#endif
 
 
 /* ============================================================
@@ -52,6 +65,141 @@ static uint32_t m_uart_rx_packet_length;
 
 /** 主循环当前 STM 数据包超出最大长度的丢弃计数。 */
 static uint32_t m_uart_rx_packet_overflow;
+static bool m_control_response_seen;
+static uint8_t m_expected_control_response;
+static uint8_t m_pending_control_frame[LEGACY_CONTROL_FRAME_MAX_SIZE];
+static uint16_t m_pending_control_length;
+
+static uint8_t control_checksum(const uint8_t *data, uint32_t length)
+{
+    uint8_t sum = 0u;
+    uint32_t index;
+    for (index = 0u; index < length; ++index)
+    {
+        sum = (uint8_t)(sum + data[index]);
+    }
+    return sum;
+}
+
+static bool control_send_uart_frame(uint8_t command, const uint8_t *payload,
+                                    uint16_t payload_length)
+{
+    uint8_t frame[32] = {0};
+    uint16_t frame_length = (uint16_t)(8u + payload_length);
+    if (frame_length > sizeof(frame))
+    {
+        return false;
+    }
+    frame[0] = 0x5Au;
+    frame[1] = 0x41u;
+    frame[2] = 0x59u;
+    frame[3] = 0x53u;
+    frame[4] = command;
+    frame[5] = (uint8_t)(payload_length >> 8);
+    frame[6] = (uint8_t)payload_length;
+    if ((payload != NULL) && (payload_length != 0u))
+    {
+        memcpy(&frame[7], payload, payload_length);
+    }
+    frame[7u + payload_length] = control_checksum(&frame[7], payload_length);
+    return receiver_uart_write(frame, frame_length);
+}
+
+static void control_handle_uart_packet(const uint8_t *frame, uint32_t length)
+{
+    uint32_t offset = 0u;
+    uint16_t payload_length;
+    while ((length - offset) >= LEGACY_CONTROL_FRAME_MIN_SIZE)
+    {
+        uint32_t frame_length;
+        const uint8_t *current = &frame[offset];
+        if ((current[0] != 0x5Au) || (current[1] != 0x41u) ||
+            (current[2] != 0x59u) || (current[3] != 0x53u))
+        {
+            ++offset;
+            continue;
+        }
+        payload_length = (uint16_t)(((uint16_t)current[5] << 8) | current[6]);
+        frame_length = (uint32_t)payload_length + 8u;
+        if ((frame_length > LEGACY_CONTROL_FRAME_MAX_SIZE) ||
+            (frame_length > (length - offset)) ||
+            (control_checksum(&current[7], payload_length) !=
+             current[frame_length - 1u]))
+        {
+            CONTROL_LOG_WARNING("[CTRL] UART RX invalid: cmd=0x%02x len=%u bytes=%u",
+                            (unsigned)current[4],
+                            (unsigned)payload_length,
+                            (unsigned)(length - offset));
+            (void)control_send_uart_frame(0x49u, NULL, 0u);
+            return;
+        }
+        CONTROL_LOG_INFO("[CTRL] UART RX OK: cmd=0x%02x data_len=%u frame_len=%u",
+                     (unsigned)current[4],
+                     (unsigned)payload_length,
+                     (unsigned)frame_length);
+        if ((current[4] == LEGACY_CMD_SN_QUERY_REQUEST) &&
+            (payload_length == 0u))
+        {
+            uint8_t empty_sn[LEGACY_CAPSULE_SN_SIZE] = {0};
+            const uint8_t *sn = receiver_binding_is_bound() ?
+                                receiver_binding_get() : empty_sn;
+            CONTROL_LOG_INFO("[BIND] query: bound=%u",
+                             (unsigned)receiver_binding_is_bound());
+            (void)control_send_uart_frame(LEGACY_CMD_SN_QUERY_RESPONSE,
+                                          sn, LEGACY_CAPSULE_SN_SIZE);
+            offset += frame_length;
+            continue;
+        }
+        if ((current[4] == LEGACY_CMD_SN_UNBIND_REQUEST) &&
+            (payload_length == 0u))
+        {
+            uint8_t result = receiver_binding_clear() ?
+                             LEGACY_CONTROL_RESULT_OK :
+                             LEGACY_CONTROL_RESULT_ERROR;
+            CONTROL_LOG_INFO("[BIND] unbind result=%u", (unsigned)result);
+            (void)control_send_uart_frame(LEGACY_CMD_SN_UNBIND_RESPONSE,
+                                          &result, 1u);
+            offset += frame_length;
+            continue;
+        }
+        if ((current[4] == LEGACY_CMD_SN_BIND_REQUEST) &&
+            (payload_length == LEGACY_CAPSULE_SN_SIZE))
+        {
+            uint8_t result = receiver_binding_set(&current[7]) ?
+                             LEGACY_CONTROL_RESULT_OK :
+                             LEGACY_CONTROL_RESULT_ERROR;
+            CONTROL_LOG_INFO("[BIND] bind result=%u", (unsigned)result);
+            NRF_LOG_HEXDUMP_INFO(&current[7], LEGACY_CAPSULE_SN_SIZE);
+            (void)control_send_uart_frame(LEGACY_CMD_SN_BIND_RESPONSE,
+                                          &result, 1u);
+            offset += frame_length;
+            continue;
+        }
+        m_control_response_seen = false;
+        m_expected_control_response =
+            (current[4] == LEGACY_CMD_SN_PREPARE_REQUEST) ?
+             LEGACY_CMD_SN_PREPARE_RESPONSE :
+            ((current[4] == LEGACY_CMD_DEVICE_ID_QUERY_REQUEST) ?
+             LEGACY_CMD_DEVICE_ID_QUERY_RESPONSE :
+            ((current[4] == LEGACY_CMD_SN_SET_REQUEST) ?
+             LEGACY_CMD_SN_SET_RESPONSE :
+            ((current[4] == LEGACY_CMD_SN_CONFIRM_REQUEST) ?
+             LEGACY_CMD_SN_CONFIRM_RESPONSE : 0u)));
+        if (m_expected_control_response == 0u)
+        {
+            CONTROL_LOG_WARNING("[CTRL] unsupported local command=0x%02x",
+                                (unsigned)current[4]);
+            (void)control_send_uart_frame(LEGACY_CMD_CONTROL_ERROR_RESPONSE,
+                                          NULL, 0u);
+            offset += frame_length;
+            continue;
+        }
+        CONTROL_LOG_INFO("[CTRL] RADIO TX: cmd=0x%02x repeat=3",
+                     (unsigned)current[4]);
+        receiver_send_control_packet(current, (uint16_t)frame_length, 3u);
+        offset += frame_length;
+    }
+}
 
 
 
@@ -74,7 +222,10 @@ void receiver_uart_idle_timer_init(void)
     NRF_TIMER2->MODE = TIMER_MODE_MODE_Timer;
     NRF_TIMER2->BITMODE = TIMER_BITMODE_BITMODE_32Bit;
     NRF_TIMER2->PRESCALER = 4u;
-    NRF_TIMER2->SHORTS = TIMER_SHORTS_COMPARE0_STOP_Msk;
+    /* Keep the idle timer running periodically. RXDRDY clears it through PPI,
+     * so COMPARE0 always means that no byte arrived for 500 ms. Keeping it
+     * running avoids depending on a PPI FORK task to restart a stopped timer. */
+    NRF_TIMER2->SHORTS = TIMER_SHORTS_COMPARE0_CLEAR_Msk;
     NRF_TIMER2->CC[0] = UART_RX_IDLE_TIMEOUT_US;
     NRF_TIMER2->EVENTS_COMPARE[0] = 0u;
     NRF_TIMER2->INTENCLR = 0xFFFFFFFFu;
@@ -82,15 +233,41 @@ void receiver_uart_idle_timer_init(void)
     NVIC_ClearPendingIRQ(TIMER2_IRQn);
     NVIC_SetPriority(TIMER2_IRQn, UART_IDLE_TIMER_IRQ_PRIORITY);
     NVIC_EnableIRQ(TIMER2_IRQn);
+
+    /* Hardware idle detection: every physical RX byte clears/starts TIMER2.
+     * After 500 ms silence TIMER2 stops UARTE RX, which makes nrfx deliver
+     * the partially filled DMA block without a per-byte CPU interrupt. */
+    NRF_PPI->CHENCLR = (1u << UART_IDLE_PPI_RX_CHANNEL);
+    NRF_PPI->CH[UART_IDLE_PPI_RX_CHANNEL].EEP =
+        (uint32_t)&NRF_UARTE0->EVENTS_RXDRDY;
+    NRF_PPI->CH[UART_IDLE_PPI_RX_CHANNEL].TEP =
+        (uint32_t)&NRF_TIMER2->TASKS_CLEAR;
+    NRF_PPI->FORK[UART_IDLE_PPI_RX_CHANNEL].TEP = 0u;
+    NRF_PPI->CHENSET = (1u << UART_IDLE_PPI_RX_CHANNEL);
+    NRF_TIMER2->TASKS_CLEAR = 1u;
+    NRF_TIMER2->TASKS_START = 1u;
 }
 
 /** @brief TIMER2 中断：置 500 ms 超时标志。 */
 void TIMER2_IRQHandler(void)
 {
+    uint32_t dma_amount;
     if (NRF_TIMER2->EVENTS_COMPARE[0] != 0u)
     {
         NRF_TIMER2->EVENTS_COMPARE[0] = 0u;
-        g_uart_rx_idle_timeout = true;
+        dma_amount = NRF_UARTE0->RXD.AMOUNT;
+        /* RXDRDY clears TIMER2 for every physical byte, therefore this compare
+         * occurs 100 ms after the last byte. Stop a partial DMA block first;
+         * an exact 8-byte block has already reached the software ring. */
+        if (dma_amount != 0u)
+        {
+            NRF_UARTE0->SHORTS &= ~UARTE_SHORTS_ENDRX_STARTRX_Msk;
+            NRF_UARTE0->TASKS_STOPRX = 1u;
+        }
+        if (g_uart_rx_packet_active || (dma_amount != 0u))
+        {
+            g_uart_rx_idle_timeout = true;
+        }
     }
 }
 
@@ -113,14 +290,10 @@ static void receiver_uart_event_handler(app_uart_evt_t *p_event)
 
             ++g_uart_rx_total;
 
-            /* 新字节到达：取消旧超时，并重新开始完整的 500 ms 计时。 */
+            /* RXDRDY -> TIMER2 is handled by PPI, so this callback only moves
+             * the completed DMA block into the software ring buffer. */
             g_uart_rx_idle_timeout = false;
             g_uart_rx_packet_active = true;
-            NRF_TIMER2->TASKS_STOP = 1u;
-            NRF_TIMER2->EVENTS_COMPARE[0] = 0u;
-            NVIC_ClearPendingIRQ(TIMER2_IRQn);
-            NRF_TIMER2->TASKS_CLEAR = 1u;
-            NRF_TIMER2->TASKS_START = 1u;
 
             tail = m_uart_rx_tail;
             next = (uint16_t)((tail + 1u) & UART_RX_BUFFER_MASK);
@@ -138,10 +311,16 @@ static void receiver_uart_event_handler(app_uart_evt_t *p_event)
     else if (p_event->evt_type == APP_UART_COMMUNICATION_ERROR)
     {
         ++g_uart_rx_errors;
+        CONTROL_LOG_WARNING("[UART] communication error: mask=0x%08x total=%u (01=overrun 02=parity 04=framing 08=break)",
+                            (unsigned)p_event->data.error_communication,
+                            (unsigned)g_uart_rx_errors);
     }
     else if (p_event->evt_type == APP_UART_FIFO_ERROR)
     {
         ++g_uart_rx_dropped;
+        CONTROL_LOG_WARNING("[UART] FIFO error: code=%u dropped=%u",
+                            (unsigned)p_event->data.error_code,
+                            (unsigned)g_uart_rx_dropped);
     }
     else
     {
@@ -233,8 +412,9 @@ bool receiver_uart_process_received(void)
     if (packet_complete)
     {
         uint32_t offset;
-        NRF_LOG_INFO("UART RX packet complete: bytes=%u idle=500ms total=%u ring_dropped=%u packet_overflow=%u errors=%u",
+        NRF_LOG_INFO("UART RX packet complete: bytes=%u idle=%ums total=%u ring_dropped=%u packet_overflow=%u errors=%u",
                      (unsigned)m_uart_rx_packet_length,
+                     (unsigned)(UART_RX_IDLE_TIMEOUT_US / 1000u),
                      (unsigned)g_uart_rx_total,
                      (unsigned)g_uart_rx_dropped,
                      (unsigned)m_uart_rx_packet_overflow,
@@ -251,6 +431,8 @@ bool receiver_uart_process_received(void)
             NRF_LOG_FLUSH();
         }
 
+        control_handle_uart_packet(m_uart_rx_packet, m_uart_rx_packet_length);
+
         /* 打印结束后清空包缓冲区，等待 STM 发送下一包。 */
         m_uart_rx_packet_length = 0u;
         m_uart_rx_packet_overflow = 0u;
@@ -258,6 +440,98 @@ bool receiver_uart_process_received(void)
     }
 
     return did_work;
+}
+
+bool receiver_control_handle_radio_packet(const uint8_t *packet)
+{
+    uint16_t payload_length;
+    uint16_t frame_length;
+    if (packet == NULL)
+    {
+        return false;
+    }
+    if ((packet[0] == LEGACY_CMD_CAPSULE_SN_BROADCAST))
+    {
+        if (receiver_binding_is_bound() &&
+            !receiver_binding_matches(&packet[1]))
+        {
+            return true;
+        }
+        if (g_stm_frame_length != 0u)
+        {
+            CONTROL_LOG_INFO("[CTRL] SN broadcast dropped: image UART busy");
+            return true;
+        }
+        CONTROL_LOG_INFO("[CTRL] RADIO RX broadcast: cmd=0x05; UART TX len=16");
+        return control_send_uart_frame(LEGACY_CMD_CAPSULE_SN_BROADCAST,
+                                       &packet[1], LEGACY_CAPSULE_SN_SIZE);
+    }
+    if ((packet[0] != 0x5Au) || (packet[1] != 0x41u) ||
+        (packet[2] != 0x59u) || (packet[3] != 0x53u))
+    {
+        return false;
+    }
+    payload_length = (uint16_t)(((uint16_t)packet[5] << 8) | packet[6]);
+    frame_length = (uint16_t)(payload_length + 8u);
+    if ((frame_length > LEGACY_CONTROL_FRAME_MAX_SIZE) ||
+        (control_checksum(&packet[7], payload_length) !=
+         packet[frame_length - 1u]))
+    {
+        CONTROL_LOG_WARNING("[CTRL] RADIO RX invalid: cmd=0x%02x data_len=%u",
+                        (unsigned)packet[4], (unsigned)payload_length);
+        return true;
+    }
+    CONTROL_LOG_INFO("[CTRL] RADIO RX OK: cmd=0x%02x data_len=%u frame_len=%u",
+                 (unsigned)packet[4],
+                 (unsigned)payload_length,
+                 (unsigned)frame_length);
+    if ((m_expected_control_response != 0u) &&
+        (packet[4] != m_expected_control_response) &&
+        (packet[4] != LEGACY_CMD_CONTROL_ERROR_RESPONSE))
+    {
+        CONTROL_LOG_WARNING("[CTRL] response ignored: expected=0x%02x received=0x%02x",
+                        (unsigned)m_expected_control_response,
+                        (unsigned)packet[4]);
+        return true;
+    }
+    if (m_control_response_seen)
+    {
+        CONTROL_LOG_INFO("[CTRL] duplicate response ignored: cmd=0x%02x",
+                     (unsigned)packet[4]);
+        return true;
+    }
+    m_control_response_seen = true;
+    if (g_stm_frame_length != 0u)
+    {
+        memcpy(m_pending_control_frame, packet, frame_length);
+        m_pending_control_length = frame_length;
+        CONTROL_LOG_INFO("[CTRL] UART TX queued: cmd=0x%02x image busy",
+                     (unsigned)packet[4]);
+    }
+    else
+    {
+        CONTROL_LOG_INFO("[CTRL] UART TX: cmd=0x%02x frame_len=%u",
+                     (unsigned)packet[4], (unsigned)frame_length);
+        (void)receiver_uart_write(packet, frame_length);
+    }
+    return true;
+}
+
+bool receiver_control_service(void)
+{
+    if ((m_pending_control_length == 0u) || (g_stm_frame_length != 0u))
+    {
+        return false;
+    }
+    if (receiver_uart_write(m_pending_control_frame,
+                            m_pending_control_length))
+    {
+        CONTROL_LOG_INFO("[CTRL] queued UART TX complete: cmd=0x%02x frame_len=%u",
+                     (unsigned)m_pending_control_frame[4],
+                     (unsigned)m_pending_control_length);
+        m_pending_control_length = 0u;
+    }
+    return true;
 }
 
 /** @brief 将一段 UART 二进制数据写入 SDK TX FIFO（FIFO 满时短暂阻塞重试）。 */
@@ -330,4 +604,3 @@ bool receiver_uart_tx_service(void)
     }
     return did_work;
 }
-

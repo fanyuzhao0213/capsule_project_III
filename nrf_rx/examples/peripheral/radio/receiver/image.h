@@ -77,6 +77,10 @@ bool receiver_forward_complete_image(void);
  */
 void receiver_send_image_ack(uint8_t image_id);
 
+/** Send a fixed-size control packet to the capsule and restore RX mode. */
+void receiver_send_control_packet(const uint8_t *packet, uint16_t length,
+                                  uint8_t repeat_count);
+
 /**
  * @brief 给 RADIO 设置接收缓冲区并启动/继续下一包接收。
  */
@@ -88,7 +92,7 @@ void receiver_radio_arm(void);
 void receiver_radio_init(void);
 
 /**
- * @brief 上电依次扫描 12 根天线，并固定选择 CRC 成功率/RSSI 最优的一根。
+ * @brief 上电依次扫描12根天线，固定选择有效包平均RSSI最强的一根。
  * @return 最终选择的天线下标，0 表示 ANT1，11 表示 ANT12。
  */
 uint8_t receiver_scan_best_antenna(void);

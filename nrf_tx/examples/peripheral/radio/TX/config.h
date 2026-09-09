@@ -12,6 +12,16 @@
 #include <stdint.h>
 #include "legacy_protocol.h"
 
+/* ============================================================
+ * RTT日志开关
+ * ============================================================ */
+
+/** 1：输出SN配置处理日志；0：完全关闭SN配置日志。 */
+#define TX_CONFIG_LOG_ENABLED       1u
+
+/** 1：输出摄像头/SPI等初始化日志；0：关闭初始化日志。 */
+#define TX_INIT_LOG_ENABLED         0u
+
 
 
 /* ============================================================
@@ -59,6 +69,15 @@
 
 /** 图像采集请求周期，单位 ms。 */
 #define IMAGE_PERIOD_MS          500u
+
+/** 当前联调阶段仅广播 SN，不采集、不发送图片；正式测试图片时改为 1。 */
+#define IMAGE_TRANSMISSION_ENABLED 1u
+
+/** 胶囊 SN 常态广播周期。 */
+#define SN_BROADCAST_PERIOD_MS   500u
+
+/** SN 配置成功后立即重复广播次数。 */
+#define SN_BROADCAST_STARTUP_REPEAT 3u
 
 /** 相邻分片发送完成后等待的间隔，单位 ms；兼顾延迟与接收端处理能力。 */
 #define IMAGE_FRAGMENT_GAP_MS    1u
@@ -115,7 +134,12 @@
 /** 图像发送指示灯引脚，高电平点亮。 */
 #define IMAGE_TX_LED_PIN         8u
 
+/** 上电后允许执行0x40～0x46出厂SN配置的时间。 */
+#define SN_CONFIG_WINDOW_MS      3000u
+
+/** SN配置窗口期间LED翻转周期；100 ms为快速闪烁。 */
+#define SN_CONFIG_LED_TOGGLE_MS  100u
+
 
 
 #endif /* TX_CONFIG_H */
-

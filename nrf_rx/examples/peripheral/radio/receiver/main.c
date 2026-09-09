@@ -16,6 +16,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "app_error.h"
+#include "binding_storage.h"
 #include "config.h"
 #include "image.h"
 #include "legacy_protocol.h"
@@ -56,6 +57,9 @@ int main(void)
     APP_ERROR_CHECK(error);
     NRF_LOG_DEFAULT_BACKENDS_INIT();
     NRF_LOG_INFO("Role: dedicated Radio-to-UART receiver (LEGACY protocol)");
+
+    receiver_binding_init();
+    NRF_LOG_INFO("Binding state: unbound after power-on/reset (RAM only)");
 
     /* 初始化 12 路射频开关并固定选择一路；必须在 Radio 启动前完成。 */
     if (!rf1662_init(RF1662_DEFAULT_ANTENNA))
@@ -105,6 +109,10 @@ int main(void)
             did_work = true;
         }
         if (receiver_forward_one())
+        {
+            did_work = true;
+        }
+        if (receiver_control_service())
         {
             did_work = true;
         }

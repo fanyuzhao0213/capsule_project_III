@@ -8,6 +8,18 @@
 #include "drv_flash.h"
 #include "nrf.h"
 #include "nrf_log.h"
+#include <string.h>
+
+#if !TX_CONFIG_LOG_ENABLED
+#undef NRF_LOG_INFO
+#undef NRF_LOG_WARNING
+#undef NRF_LOG_ERROR
+#undef NRF_LOG_HEXDUMP_INFO
+#define NRF_LOG_INFO(...)
+#define NRF_LOG_WARNING(...)
+#define NRF_LOG_ERROR(...)
+#define NRF_LOG_HEXDUMP_INFO(...)
+#endif
 
 
 
@@ -68,13 +80,10 @@ void capsule_sn_storage_init(void)
     if (buffer_is_all_ff(flash_sn, LEGACY_CAPSULE_SN_SIZE))
     {
         g_active_sn = (const uint8_t *)FICR_DEVICE_ID_ADDR;
-        NRF_LOG_INFO("Capsule SN: using FICR DEVICEID (no user-bound SN)");
     }
     else
     {
         g_active_sn = flash_sn;
-        NRF_LOG_INFO("Capsule SN: using Flash-bound SN at 0x%08x",
-                     (unsigned)FLASH_CAPSULE_SN_ADDR);
     }
 }
 
@@ -84,20 +93,18 @@ const uint8_t *capsule_sn_storage_get_active(void)
     return g_active_sn;
 }
 
-/** @brief 判断是否已绑定用户设定 SN。 */
-bool capsule_sn_storage_is_bound(void)
-{
-    const uint8_t *flash_sn = (const uint8_t *)FLASH_CAPSULE_SN_ADDR;
-    return !buffer_is_all_ff(flash_sn, LEGACY_CAPSULE_SN_SIZE);
-}
-
 /** @brief 写入新 SN 到 Flash（依赖 drv_flash 驱动）。 */
 bool capsule_sn_storage_write(const capsule_sn_t *sn)
 {
     if (sn == NULL)
     {
+        NRF_LOG_ERROR("[SN FLASH] write rejected: null SN");
         return false;
     }
+
+    NRF_LOG_INFO("[SN FLASH] erase page at 0x%08x",
+                 (unsigned)FLASH_CAPSULE_SN_ADDR);
+    NRF_LOG_HEXDUMP_INFO(sn->bytes, LEGACY_CAPSULE_SN_SIZE);
 
     /* 写入期间 CPU 会被 NVMC 阻塞数毫秒，期间无线收发会暂停；
      * 调用方需自行确保此时不会有关键的 Radio 操作正在等待。
@@ -105,19 +112,15 @@ bool capsule_sn_storage_write(const capsule_sn_t *sn)
     flash_page_erase(FLASH_CAPSULE_SN_ADDR);
     flash_buff_write(FLASH_CAPSULE_SN_ADDR, sn->bytes, LEGACY_CAPSULE_SN_SIZE);
 
+    if (memcmp((const void *)FLASH_CAPSULE_SN_ADDR,
+               sn->bytes, LEGACY_CAPSULE_SN_SIZE) != 0)
+    {
+        NRF_LOG_ERROR("[SN FLASH] verify FAILED");
+        return false;
+    }
+
     /* 重新读取 Flash，让 active 指针切换到新写入的 SN。 */
     capsule_sn_storage_init();
-    NRF_LOG_INFO("Capsule SN written to Flash");
+    NRF_LOG_INFO("[SN FLASH] write and verify OK");
     return true;
 }
-
-/** @brief 监听 SN 设定命令并执行绑定（保留接口，按需实现）。 */
-void capsule_sn_storage_set_checking(void)
-{
-    /* TODO: 监听 CMD_REQ_CAPSULE_SN_SET 等命令，校验设备 ID 后调用
-     *       capsule_sn_storage_write() 写入新 SN，并回送应答包。
-     *       可参考 TYGD31-2.4GHZ/TYGD_TX/Application/capsule_sn_broadcast.c
-     *       中的 capsule_sn_set_checking() 实现。
-     */
-}
-

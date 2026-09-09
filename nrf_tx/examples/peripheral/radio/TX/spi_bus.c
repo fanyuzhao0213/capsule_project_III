@@ -3,12 +3,21 @@
  * @brief 使用nRF52832 SPIM0和EasyDMA访问CX93510主机SPI口。
  */
 #include "spi_bus.h"
+#include "config.h"
 
 #include <string.h>
 #include "nrf.h"
 #include "nrf_delay.h"
 #include "nrf_gpio.h"
 #include "nrf_log.h"
+#if !TX_INIT_LOG_ENABLED
+#undef NRF_LOG_INFO
+#undef NRF_LOG_WARNING
+#undef NRF_LOG_ERROR
+#define NRF_LOG_INFO(...)
+#define NRF_LOG_WARNING(...)
+#define NRF_LOG_ERROR(...)
+#endif
 
 /* CX93510主机SPI连接，数值来自已在实板验证通过的原理图网络。 */
 #define CX_SPI_SCK_PIN   12u

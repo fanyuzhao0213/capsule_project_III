@@ -54,9 +54,6 @@
 /** @brief 胶囊序列号广播：发送板定时广播胶囊 SN，便于接收板识别设备。 */
 #define LEGACY_CMD_CAPSULE_SN_BROADCAST      0x05u
 
-/** @brief 胶囊 ID 号广播：发送板广播芯片出厂 DEVICEID，便于接收板/PC 端识别。 */
-#define LEGACY_CMD_CAPSULE_ID_BROADCAST      0x07u
-
 /** @brief 图像接收应答：接收板通知发送板某帧图像已成功接收。 */
 #define LEGACY_CMD_IMAGE_RECEIVED_RESPONSE   0x10u
 
@@ -65,6 +62,27 @@
 
 /** @brief 图像转发命令：接收板将完整图像转发给 STM32 主控，再由 STM32 透传到 PC。 */
 #define LEGACY_CMD_IMAGE_FORWARD             0x81u
+
+/** PC 端到胶囊端的 ZAYS 控制帧命令。 */
+#define LEGACY_CMD_SN_QUERY_REQUEST           0x20u
+#define LEGACY_CMD_SN_QUERY_RESPONSE          0x21u
+#define LEGACY_CMD_SN_UNBIND_REQUEST          0x22u
+#define LEGACY_CMD_SN_UNBIND_RESPONSE         0x23u
+#define LEGACY_CMD_SN_BIND_REQUEST            0x24u
+#define LEGACY_CMD_SN_BIND_RESPONSE           0x25u
+#define LEGACY_CMD_SN_PREPARE_REQUEST         0x40u
+#define LEGACY_CMD_SN_PREPARE_RESPONSE        0x41u
+#define LEGACY_CMD_DEVICE_ID_QUERY_REQUEST    0x42u
+#define LEGACY_CMD_DEVICE_ID_QUERY_RESPONSE   0x43u
+#define LEGACY_CMD_SN_SET_REQUEST             0x44u
+#define LEGACY_CMD_SN_SET_RESPONSE            0x45u
+#define LEGACY_CMD_SN_CONFIRM_REQUEST         0x46u
+#define LEGACY_CMD_SN_CONFIRM_RESPONSE        0x47u
+#define LEGACY_CMD_CONTROL_ERROR_RESPONSE     0x49u
+#define LEGACY_CONTROL_RESULT_OK              0x01u
+#define LEGACY_CONTROL_RESULT_ERROR           0x00u
+#define LEGACY_CONTROL_FRAME_MIN_SIZE            8u
+#define LEGACY_CONTROL_FRAME_MAX_SIZE           32u
 
 
 
@@ -97,4 +115,3 @@ static inline void LegacyProtocol_PutU16Be(uint8_t *destination, uint16_t value)
 }
 
 #endif /* LEGACY_PROTOCOL_H */
-

@@ -57,7 +57,15 @@ static __INLINE uint32_t fifo_length(app_fifo_t * const fifo)
 
 static app_uart_event_handler_t   m_event_handler;            /**< Event handler function. */
 static uint8_t tx_buffer[1];
+#if UART0_CONFIG_USE_EASY_DMA
+#define APP_UART_EASY_DMA_RX_CHUNK 8u
+/* The common control-frame sizes are 8/16/24 bytes. An 8-byte DMA block
+ * completes these frames without relying on the idle-timeout path, while
+ * still reducing the interrupt rate by 8x compared with byte reception. */
+static uint8_t rx_buffer[APP_UART_EASY_DMA_RX_CHUNK];
+#else
 static uint8_t rx_buffer[1];
+#endif
 static bool m_rx_ovf;
 
 static app_fifo_t                  m_rx_fifo;                               /**< RX FIFO buffer for storing data received on the UART until the application fetches them using app_uart_get(). */
@@ -67,6 +75,7 @@ static void uart_event_handler(nrf_drv_uart_event_t * p_event, void* p_context)
 {
     app_uart_evt_t app_uart_event;
     uint32_t err_code;
+    uint32_t index;
 
     switch (p_event->type)
     {
@@ -75,19 +84,33 @@ static void uart_event_handler(nrf_drv_uart_event_t * p_event, void* p_context)
             if(p_event->data.rxtx.bytes == 0)
             {
                // A new start RX is needed to continue to receive data
+#if UART0_CONFIG_USE_EASY_DMA
+               err_code = nrf_drv_uart_rx(&app_uart_inst, rx_buffer,
+                                           APP_UART_EASY_DMA_RX_CHUNK);
+#else
                (void)nrf_drv_uart_rx(&app_uart_inst, rx_buffer, 1);
+#endif
                break;
             }
 
-            // Write received byte to FIFO.
-            err_code = app_fifo_put(&m_rx_fifo, p_event->data.rxtx.p_data[0]);
+            // Copy every byte completed by EasyDMA, including a partial block
+            // produced by RXTO. The original APP_UART code copied only byte 0.
+            err_code = NRF_SUCCESS;
+            for (index = 0; index < p_event->data.rxtx.bytes; ++index)
+            {
+                err_code = app_fifo_put(&m_rx_fifo,
+                                        p_event->data.rxtx.p_data[index]);
+                if (err_code != NRF_SUCCESS)
+                {
+                    break;
+                }
+            }
             if (err_code != NRF_SUCCESS)
             {
                 app_uart_event.evt_type          = APP_UART_FIFO_ERROR;
                 app_uart_event.data.error_code   = err_code;
                 m_event_handler(&app_uart_event);
             }
-            // Notify that there are data available.
             else if (FIFO_LENGTH(m_rx_fifo) != 0)
             {
                 app_uart_event.evt_type = APP_UART_DATA_READY;
@@ -97,7 +120,13 @@ static void uart_event_handler(nrf_drv_uart_event_t * p_event, void* p_context)
             // Start new RX if size in buffer.
             if (FIFO_LENGTH(m_rx_fifo) <= m_rx_fifo.buf_size_mask)
             {
+#if UART0_CONFIG_USE_EASY_DMA
+                err_code = nrf_drv_uart_rx(&app_uart_inst,
+                                           rx_buffer,
+                                           APP_UART_EASY_DMA_RX_CHUNK);
+#else
                 (void)nrf_drv_uart_rx(&app_uart_inst, rx_buffer, 1);
+#endif
             }
             else
             {
@@ -110,7 +139,12 @@ static void uart_event_handler(nrf_drv_uart_event_t * p_event, void* p_context)
         case NRF_DRV_UART_EVT_ERROR:
             app_uart_event.evt_type                 = APP_UART_COMMUNICATION_ERROR;
             app_uart_event.data.error_communication = p_event->data.error.error_mask;
+#if UART0_CONFIG_USE_EASY_DMA
+            err_code = nrf_drv_uart_rx(&app_uart_inst, rx_buffer,
+                                        APP_UART_EASY_DMA_RX_CHUNK);
+#else
             (void)nrf_drv_uart_rx(&app_uart_inst, rx_buffer, 1);
+#endif
             m_event_handler(&app_uart_event);
             break;
 
@@ -174,7 +208,12 @@ uint32_t app_uart_init(const app_uart_comm_params_t * p_comm_params,
     // Turn on receiver if RX pin is connected
     if (p_comm_params->rx_pin_no != UART_PIN_DISCONNECTED)
     {
+#if UART0_CONFIG_USE_EASY_DMA
+        return nrf_drv_uart_rx(&app_uart_inst, rx_buffer,
+                               APP_UART_EASY_DMA_RX_CHUNK);
+#else
         return nrf_drv_uart_rx(&app_uart_inst, rx_buffer,1);
+#endif
     }
     else
     {
@@ -208,7 +247,13 @@ uint32_t app_uart_get(uint8_t * p_byte)
     if (rx_ovf)
     {
         m_rx_ovf = false;
+#if UART0_CONFIG_USE_EASY_DMA
+        uint32_t uart_err_code = nrf_drv_uart_rx(&app_uart_inst,
+                                                 rx_buffer,
+                                                 APP_UART_EASY_DMA_RX_CHUNK);
+#else
         uint32_t uart_err_code = nrf_drv_uart_rx(&app_uart_inst, rx_buffer, 1);
+#endif
 
         // RX resume should never fail.
         APP_ERROR_CHECK(uart_err_code);

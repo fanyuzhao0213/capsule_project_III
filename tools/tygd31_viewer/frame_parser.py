@@ -4,7 +4,7 @@ STM32 → PC UART3 帧解析 + .YS 文件解析（共用）
 
 UART3 帧格式（STM → PC）：
   +-----+-----+-----+-----+-----+-------+-------+
-  | FF  | 55  | 12  | 34  | cmd | lenHI | lenLO |  (7B header)
+  | 5A  | 41  | 59  | 53  | cmd | lenHI | lenLO |  (7B header)
   +-----+-----+-----+-----+-----+-------+-------+
   | data[0..N-1]                                  |  (N bytes)
   +-----------------------------------------------+
@@ -12,15 +12,10 @@ UART3 帧格式（STM → PC）：
   +-----------------------------------------------+
 
 UART3 payload（cmd=0x81 IMG_FORWARD）：
-  +----------+--------------+--------------+
-  | JPEG数据 | JPEG header   | DeviceInfo   |
-  | (变长)   | (686 bytes)  | (128 bytes)  |
-  |          | FF D8 ... FF |              |
-  +----------+--------------+--------------+
-
-  注：JFIF JPEG 文件由 header + 数据 组成，原始流把数据放在前面，
-      header 放在后面以便按帧重组。重组时需要调换顺序：
-      full_jpeg = jpeg_header + jpeg_data
+  +--------------------------+--------------+
+  | 完整JPEG（FF D8...FF D9） | DeviceInfo   |
+  | (变长)                   | (128 bytes)  |
+  +--------------------------+--------------+
 
 .YS 文件帧结构（20064 bytes）：
   +-----------+----------------+----------+
@@ -36,7 +31,7 @@ from typing import Optional, List, Tuple
 
 
 # 协议常量（与 STM 端 drv_usart.c 对齐）
-FRAME_HEADER_BYTES = bytes([0xFF, 0x55, 0x12, 0x34])
+FRAME_HEADER_BYTES = bytes([0x5A, 0x41, 0x59, 0x53])
 
 CMD_IMG_FORWARD = 0x81
 CMD_TEXT_INFO = 0x98   # TFC: / TFFC: 等 ASCII 文本
@@ -75,6 +70,9 @@ class ParseState:
         while True:
             frame, consumed = try_parse_one(bytes(self.buf))
             if frame is None:
+                if consumed > 0:
+                    del self.buf[:consumed]
+                    continue
                 break
             frames.append(frame)
             del self.buf[:consumed]
@@ -92,7 +90,7 @@ def try_parse_one(buf: bytes) -> Tuple[Optional[ImageFrame], int]:
     if len(buf) < 7:
         return None, 0
 
-    # 检查帧头 0xFF 0x55 0x12 0x34
+    # 检查当前STM32输出的ZAYS帧头：0x5A 0x41 0x59 0x53
     if buf[0:4] != FRAME_HEADER_BYTES:
         idx = find_header(buf, 1)
         if idx < 0:
@@ -123,18 +121,14 @@ def try_parse_one(buf: bytes) -> Tuple[Optional[ImageFrame], int]:
     )
 
     if cmd == CMD_IMG_FORWARD:
-        if data_len < JPEG_HEADER_LEN + FRAME_HEADER_INFO_LEN:
+        if data_len <= FRAME_HEADER_INFO_LEN:
             return frame, total_len
 
-        # payload 布局：[JPEG数据][JPEG header 686B][DeviceInfo 128B]
-        jpeg_total = data_len - JPEG_HEADER_LEN - FRAME_HEADER_INFO_LEN
-        jpeg_data = payload[0:jpeg_total]
-        jpeg_header = payload[jpeg_total:jpeg_total + JPEG_HEADER_LEN]
-        device_info = payload[jpeg_total + JPEG_HEADER_LEN:
-                              jpeg_total + JPEG_HEADER_LEN + FRAME_HEADER_INFO_LEN]
-        # 还原成完整 JPEG 文件（必须 header 在前）
-        frame.jpeg = jpeg_header + jpeg_data
-        frame.device_info = device_info
+        # 当前STM32发送布局：[完整JPEG][DeviceInfo 128B]。
+        # JPEG已经是FF D8开头、FF D9结尾，不再拆分或重排686字节头部。
+        jpeg_total = data_len - FRAME_HEADER_INFO_LEN
+        frame.jpeg = payload[:jpeg_total]
+        frame.device_info = payload[jpeg_total:]
     elif cmd == CMD_TEXT_INFO:
         frame.jpeg = payload  # ASCII 文本
         frame.device_info = b""
@@ -264,4 +258,3 @@ def list_ys_files(root: str) -> List[str]:
         for e in entries
         if e.upper().endswith(".YS") and os.path.isfile(os.path.join(root, e))
     )
-

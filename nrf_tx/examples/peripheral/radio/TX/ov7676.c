@@ -6,11 +6,20 @@
  * 写入被替换为当前工程带ACK和超时检查的代理I2C接口。
  */
 #include "ov7676.h"
+#include "config.h"
 
 #include "cx93510.h"
 #include "nrf_delay.h"
 #include "nrf_gpio.h"
 #include "nrf_log.h"
+#if !TX_INIT_LOG_ENABLED
+#undef NRF_LOG_INFO
+#undef NRF_LOG_WARNING
+#undef NRF_LOG_ERROR
+#define NRF_LOG_INFO(...)
+#define NRF_LOG_WARNING(...)
+#define NRF_LOG_ERROR(...)
+#endif
 #include "nrf_log_ctrl.h"
 
 /* OV7676硬件关断脚由nRF52832 P0.06控制，高电平为正常工作。 */

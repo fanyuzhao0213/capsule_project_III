@@ -1,0 +1,13 @@
+# IDE/build output
+**/_build/
+**/_verify_build/
+**/JLinkLog.txt
+**/*.uvguix.*
+**/__pycache__/
+*.pyc
+
+# Local dependencies and generated output
+node_modules/
+outputs/
+*.log
+~$*

@@ -14,6 +14,17 @@
 #include "nrf_log.h"
 #include <string.h>
 
+#if !TX_CONFIG_LOG_ENABLED
+#undef NRF_LOG_INFO
+#undef NRF_LOG_WARNING
+#undef NRF_LOG_ERROR
+#undef NRF_LOG_HEXDUMP_INFO
+#define NRF_LOG_INFO(...)
+#define NRF_LOG_WARNING(...)
+#define NRF_LOG_ERROR(...)
+#define NRF_LOG_HEXDUMP_INFO(...)
+#endif
+
 
 
 /* ============================================================
@@ -50,7 +61,12 @@ static uint8_t m_rx_packet[RADIO_PACKET_SIZE] __ALIGNED(4);
 /** Radio EasyDMA 发送缓冲区，按 4 字节对齐。 */
 static uint8_t m_tx_packet[RADIO_PACKET_SIZE] __ALIGNED(4);
 
-
+/** 0x44只暂存新SN，收到0x46后才写入Flash。 */
+static uint8_t m_pending_sn[LEGACY_CAPSULE_SN_SIZE];
+static bool m_sn_update_pending;
+static bool m_sn_config_window_active;
+static bool m_sn_config_complete;
+static uint32_t m_sn_config_last_activity_ms;
 
 /* ============================================================
  * 序列号与初始化
@@ -61,6 +77,33 @@ void capsule_sn_refresh(void)
 {
     const uint8_t *active_sn = capsule_sn_storage_get_active();
     memcpy(g_capsule_sn, active_sn, LEGACY_CAPSULE_SN_SIZE);
+}
+
+void capsule_sn_config_window_begin(void)
+{
+    m_sn_update_pending = false;
+    m_sn_config_complete = false;
+    m_sn_config_window_active = true;
+    m_sn_config_last_activity_ms = g_time_ms;
+    NRF_LOG_INFO("[SN CONFIG] window OPEN");
+}
+
+void capsule_sn_config_window_end(void)
+{
+    m_sn_config_window_active = false;
+    m_sn_update_pending = false;
+    NRF_LOG_INFO("[SN CONFIG] window CLOSED: result=%s",
+                 m_sn_config_complete ? "configured" : "timeout");
+}
+
+bool capsule_sn_config_is_complete(void)
+{
+    return m_sn_config_complete;
+}
+
+uint32_t capsule_sn_config_last_activity_ms(void)
+{
+    return m_sn_config_last_activity_ms;
 }
 
 /** @brief 启动 Radio 与 CX93510 所需的 16 MHz 外部高频晶振。 */
@@ -133,8 +176,6 @@ void radio_configure_image_link(void)
     NVIC_SetPriority(RADIO_IRQn, RADIO_IRQ_PRIORITY);
     NVIC_EnableIRQ(RADIO_IRQn);
     radio_arm_rx();
-    NRF_LOG_INFO("RADIO ready: 2400 MHz, +4 dBm, 2 Mbit, legacy packet=%u bytes, RX IRQ enabled",
-                 (unsigned)RADIO_PACKET_SIZE);
 }
 
 /** @brief 阻塞发送一个 254 字节 Radio 包，发送完成立即恢复 RX。 */
@@ -156,6 +197,225 @@ static void radio_send_packet(const uint8_t *packet)
     NVIC_EnableIRQ(RADIO_IRQn);
 }
 
+static uint8_t control_checksum(const uint8_t *data, uint16_t length)
+{
+    uint8_t checksum = 0u;
+    uint16_t index;
+    for (index = 0u; index < length; ++index)
+    {
+        checksum = (uint8_t)(checksum + data[index]);
+    }
+    return checksum;
+}
+
+static void radio_send_control_response(uint8_t command,
+                                        const uint8_t *payload,
+                                        uint16_t payload_length)
+{
+    uint8_t repeat;
+    uint16_t frame_length = (uint16_t)(payload_length + 8u);
+    memset(m_tx_packet, 0, sizeof(m_tx_packet));
+    m_tx_packet[0] = 0x5Au;
+    m_tx_packet[1] = 0x41u;
+    m_tx_packet[2] = 0x59u;
+    m_tx_packet[3] = 0x53u;
+    m_tx_packet[4] = command;
+    m_tx_packet[5] = (uint8_t)(payload_length >> 8);
+    m_tx_packet[6] = (uint8_t)payload_length;
+    if ((payload != NULL) && (payload_length != 0u))
+    {
+        memcpy(&m_tx_packet[7], payload, payload_length);
+    }
+    m_tx_packet[frame_length - 1u] = control_checksum(payload, payload_length);
+    NRF_LOG_INFO("[CTRL] RADIO TX response: cmd=0x%02x data_len=%u frame_len=%u repeat=3",
+                 (unsigned)command,
+                 (unsigned)payload_length,
+                 (unsigned)frame_length);
+    NRF_LOG_HEXDUMP_INFO(m_tx_packet, frame_length);
+    for (repeat = 0u; repeat < 3u; ++repeat)
+    {
+        radio_send_packet(m_tx_packet);
+    }
+}
+
+static bool radio_process_control_frame(const uint8_t *packet)
+{
+    uint16_t payload_length;
+    uint16_t frame_length;
+    capsule_sn_t requested_sn;
+    if ((packet[0] != 0x5Au) || (packet[1] != 0x41u) ||
+        (packet[2] != 0x59u) || (packet[3] != 0x53u))
+    {
+        return false;
+    }
+    payload_length = LegacyProtocol_GetU16Be(&packet[5]);
+    frame_length = (uint16_t)(payload_length + 8u);
+    NRF_LOG_INFO("[CTRL] RADIO RX request: cmd=0x%02x data_len=%u frame_len=%u",
+                 (unsigned)packet[4],
+                 (unsigned)payload_length,
+                 (unsigned)frame_length);
+    NRF_LOG_HEXDUMP_INFO(packet,
+                         (frame_length <= LEGACY_CONTROL_FRAME_MAX_SIZE) ?
+                         frame_length : LEGACY_CONTROL_FRAME_MAX_SIZE);
+    if ((frame_length > LEGACY_CONTROL_FRAME_MAX_SIZE) ||
+        (control_checksum(&packet[7], payload_length) !=
+         packet[frame_length - 1u]))
+    {
+        NRF_LOG_WARNING("[CTRL] invalid frame: cmd=0x%02x len=%u",
+                        (unsigned)packet[4],
+                        (unsigned)payload_length);
+        return true;
+    }
+    if (((packet[4] == LEGACY_CMD_SN_PREPARE_REQUEST) ||
+         (packet[4] == LEGACY_CMD_DEVICE_ID_QUERY_REQUEST) ||
+         (packet[4] == LEGACY_CMD_SN_SET_REQUEST) ||
+         (packet[4] == LEGACY_CMD_SN_CONFIRM_REQUEST)) &&
+        !m_sn_config_window_active)
+    {
+        /* A repeated confirm can arrive because NRF_RX transmits each request
+         * three times. Keep the successful confirm idempotent. */
+        if ((packet[4] == LEGACY_CMD_SN_CONFIRM_REQUEST) &&
+            m_sn_config_complete)
+        {
+            NRF_LOG_INFO("[SN CONFIG] duplicate confirm; resend 0x47");
+            radio_send_control_response(LEGACY_CMD_SN_CONFIRM_RESPONSE,
+                                        NULL, 0u);
+        }
+        else
+        {
+            NRF_LOG_WARNING("[SN CONFIG] reject cmd=0x%02x: window closed",
+                            (unsigned)packet[4]);
+            radio_send_control_response(LEGACY_CMD_CONTROL_ERROR_RESPONSE,
+                                        NULL, 0u);
+        }
+        return true;
+    }
+    if (((packet[4] == LEGACY_CMD_SN_PREPARE_REQUEST) &&
+         (payload_length == 0u)) ||
+        ((packet[4] == LEGACY_CMD_DEVICE_ID_QUERY_REQUEST) &&
+         (payload_length == 0u)) ||
+        ((packet[4] == LEGACY_CMD_SN_SET_REQUEST) &&
+         (payload_length == 16u)) ||
+        ((packet[4] == LEGACY_CMD_SN_CONFIRM_REQUEST) &&
+         (payload_length == 0u)))
+    {
+        m_sn_config_last_activity_ms = g_time_ms;
+        NRF_LOG_INFO("[SN CONFIG] valid cmd=0x%02x; inactivity timer reset",
+                     (unsigned)packet[4]);
+    }
+    if ((packet[4] == LEGACY_CMD_SN_PREPARE_REQUEST) &&
+             (payload_length == 0u))
+    {
+        m_sn_update_pending = false;
+        NRF_LOG_INFO("[CTRL] factory SN prepare accepted; pending cleared");
+        radio_send_control_response(LEGACY_CMD_SN_PREPARE_RESPONSE,
+                                    NULL, 0u);
+    }
+    else if ((packet[4] == LEGACY_CMD_DEVICE_ID_QUERY_REQUEST) &&
+             (payload_length == 0u))
+    {
+        NRF_LOG_INFO("[CTRL] DEVICEID query");
+        NRF_LOG_HEXDUMP_INFO((const uint8_t *)NRF_FICR->DEVICEID, 8u);
+        radio_send_control_response(LEGACY_CMD_DEVICE_ID_QUERY_RESPONSE,
+                                    (const uint8_t *)NRF_FICR->DEVICEID, 8u);
+    }
+    else if ((packet[4] == LEGACY_CMD_SN_SET_REQUEST) &&
+             (payload_length == 16u))
+    {
+        NRF_LOG_INFO("[CTRL] factory SN set request");
+        NRF_LOG_INFO("[CTRL] request DEVICEID / local DEVICEID:");
+        NRF_LOG_HEXDUMP_INFO(&packet[7], 8u);
+        NRF_LOG_HEXDUMP_INFO((const uint8_t *)NRF_FICR->DEVICEID, 8u);
+        if (memcmp(&packet[7], (const void *)NRF_FICR->DEVICEID, 8u) != 0)
+        {
+            NRF_LOG_WARNING("[CTRL] SN set rejected: DEVICEID mismatch");
+            radio_send_control_response(LEGACY_CMD_CONTROL_ERROR_RESPONSE,
+                                        NULL, 0u);
+        }
+        else
+        {
+            memcpy(m_pending_sn, &packet[15], LEGACY_CAPSULE_SN_SIZE);
+            m_sn_update_pending = true;
+            NRF_LOG_INFO("[CTRL] SN staged; waiting for cmd=0x46");
+            NRF_LOG_HEXDUMP_INFO(m_pending_sn, LEGACY_CAPSULE_SN_SIZE);
+            radio_send_control_response(LEGACY_CMD_SN_SET_RESPONSE,
+                                        m_pending_sn,
+                                        LEGACY_CAPSULE_SN_SIZE);
+        }
+    }
+    else if ((packet[4] == LEGACY_CMD_SN_CONFIRM_REQUEST) &&
+             (payload_length == 0u))
+    {
+        NRF_LOG_INFO("[CTRL] factory SN confirm: pending=%u",
+                     (unsigned)m_sn_update_pending);
+        if (m_sn_update_pending)
+        {
+            memcpy(requested_sn.bytes, m_pending_sn,
+                   LEGACY_CAPSULE_SN_SIZE);
+            if (capsule_sn_storage_write(&requested_sn))
+            {
+                capsule_sn_refresh();
+                m_sn_update_pending = false;
+                m_sn_config_complete = true;
+                NRF_LOG_INFO("[CTRL] SN Flash write OK; active SN:");
+                NRF_LOG_HEXDUMP_INFO(g_capsule_sn,
+                                     LEGACY_CAPSULE_SN_SIZE);
+                radio_send_control_response(LEGACY_CMD_SN_CONFIRM_RESPONSE,
+                                            NULL, 0u);
+            }
+            else
+            {
+                NRF_LOG_ERROR("[CTRL] SN Flash write FAILED");
+                radio_send_control_response(LEGACY_CMD_CONTROL_ERROR_RESPONSE,
+                                            NULL, 0u);
+            }
+        }
+        else
+        {
+            NRF_LOG_WARNING("[CTRL] confirm rejected: no staged SN");
+            radio_send_control_response(LEGACY_CMD_CONTROL_ERROR_RESPONSE,
+                                        NULL, 0u);
+        }
+    }
+    else
+    {
+        NRF_LOG_WARNING("[CTRL] unsupported command/length: cmd=0x%02x len=%u",
+                        (unsigned)packet[4],
+                        (unsigned)payload_length);
+        radio_send_control_response(LEGACY_CMD_CONTROL_ERROR_RESPONSE,
+                                    NULL, 0u);
+    }
+    return true;
+}
+
+void capsule_sn_broadcast_service(void)
+{
+    static uint32_t last_broadcast_ms;
+    if (g_image_tx.active || g_image_tx.awaiting_ack ||
+        ((last_broadcast_ms != 0u) &&
+         ((g_time_ms - last_broadcast_ms) < SN_BROADCAST_PERIOD_MS)))
+    {
+        return;
+    }
+    last_broadcast_ms = g_time_ms;
+    memset(m_tx_packet, 0, sizeof(m_tx_packet));
+    m_tx_packet[0] = LEGACY_CMD_CAPSULE_SN_BROADCAST;
+    memcpy(&m_tx_packet[1], g_capsule_sn, LEGACY_CAPSULE_SN_SIZE);
+    radio_send_packet(m_tx_packet);
+}
+
+void capsule_sn_broadcast_burst(uint8_t repeat_count)
+{
+    uint8_t index;
+    memset(m_tx_packet, 0, sizeof(m_tx_packet));
+    m_tx_packet[0] = LEGACY_CMD_CAPSULE_SN_BROADCAST;
+    memcpy(&m_tx_packet[1], g_capsule_sn, LEGACY_CAPSULE_SN_SIZE);
+    for (index = 0u; index < repeat_count; ++index)
+    {
+        radio_send_packet(m_tx_packet);
+    }
+}
+
 
 
 /* ============================================================
@@ -167,8 +427,6 @@ void image_tx_led_init(void)
 {
     nrf_gpio_cfg_output(IMAGE_TX_LED_PIN);
     nrf_gpio_pin_clear(IMAGE_TX_LED_PIN);
-    NRF_LOG_INFO("Image TX LED ready: P0.%02u, active high",
-                 (unsigned)IMAGE_TX_LED_PIN);
 }
 
 /** @brief 控制 P0.08 发送指示灯亮灭。 */
@@ -221,16 +479,25 @@ void radio_rx_process(void)
     {
         uint8_t head = m_rx_queue.head;                                       //   当前读指针
         const uint8_t *packet = m_rx_queue.data[head];                        //   当前 Radio 包内容
-        if (g_image_tx.awaiting_ack &&                                       // ② 正在等待 ACK 且命令字匹配
+        if (m_sn_config_window_active)
+        {
+            NRF_LOG_INFO("[SN CONFIG] RF packet received: %02x %02x %02x %02x",
+                         (unsigned)packet[0],
+                         (unsigned)packet[1],
+                         (unsigned)packet[2],
+                         (unsigned)packet[3]);
+        }
+        if (radio_process_control_frame(packet))
+        {
+            /* ZAYS control frame handled above. */
+        }
+        else if (g_image_tx.awaiting_ack &&                                  // ② 正在等待 ACK 且命令字匹配
             (packet[0] == LEGACY_CMD_IMAGE_RECEIVED_RESPONSE) &&
             (packet[1] == (uint8_t)g_image_tx.frame_id) &&                   // ③ 帧 ID 必须一致（防止旧 ACK 误清当前等待）
             (memcmp(&packet[2], g_capsule_sn, LEGACY_CAPSULE_SN_SIZE) == 0))  // ④ 序列号必须一致（防止其他设备的 ACK 干扰）
         {
             g_image_tx.awaiting_ack = false;                                  // ⑤ ACK 匹配成功：清等待标志
             g_image_tx.retry_count = 0u;                                      //   清重发计数
-            NRF_LOG_INFO("[%u ms] ACK received: frame=%u",
-                         (unsigned)g_time_ms,
-                         (unsigned)g_image_tx.frame_id);
         }
         m_rx_queue.head = (uint8_t)((head + 1u) % RADIO_QUEUE_DEPTH);         // ⑥ 无论是否匹配 ACK，都要把这包出队，否则会卡队列
     }
@@ -253,7 +520,9 @@ void TIMER1_IRQHandler(void)
         if (++image_period_count >= IMAGE_PERIOD_MS)
         {
             image_period_count = 0u;
+#if IMAGE_TRANSMISSION_ENABLED
             g_capture_due = true;
+#endif
         }
     }
 }
@@ -289,7 +558,6 @@ static void select_image_block(bool config_block)
 /** @brief 处理每 IMAGE_PERIOD_MS 一次的图像采集请求。 */
 void image_capture_task(void)
 {
-    uint32_t capture_start_ms;                                                   // 采集开始时间戳（用于计算耗时）
     if (!g_capture_due)                                                          // ① TIMER1 周期未到：直接返回，不抢占主循环
     {
         return;       //没到周期直接返回
@@ -299,21 +567,14 @@ void image_capture_task(void)
     {
         return;                                                                  //   静默跳过，不再打印 WARNING（避免日志刷屏）
     }
-    capture_start_ms = g_time_ms;                                                //   记录采集开始时刻
-    NRF_LOG_INFO("[%u ms] Capture start: frame=%u",
-                 (unsigned)g_time_ms,
-                 (unsigned)(g_image_tx.frame_id + 1u));                          // ④ 打印采集开始时间戳
     if (!cx93510_capture_one(&g_image_tx.frame, IMAGE_CAPTURE_TIMEOUT_MS))      // ⑤ 调用 CX93510 采集一帧并在超时内读回帧头（offset/size）
     {
-        NRF_LOG_ERROR("CX93510 capture/read-header failed");                    //     采集或读头失败：灭灯返回，下个周期重试
         image_tx_led_set(false);
         return;
     }
     if ((g_image_tx.frame.jpeg_size == 0u) ||                                   // ⑥ 过滤异常帧：JPEG 长度为 0 或超出协议上限的帧直接丢弃
         (g_image_tx.frame.jpeg_size > LEGACY_IMAGE_MAX_SIZE))
     {
-        NRF_LOG_ERROR("JPEG length outside legacy protocol range: %u",
-                      (unsigned)g_image_tx.frame.jpeg_size);
         image_tx_led_set(false);
         return;
     }
@@ -325,17 +586,11 @@ void image_capture_task(void)
     g_image_tx.next_fragment_ms = g_time_ms;                                    // ⑫ 允许下一分片立即发送（image_tx_service 不会等到未来时刻）
     g_image_tx.active = true;                                                   // ⑬ 置位活动标志，通知 image_tx_service 开始处理本帧
     image_tx_led_set(true);                                                     // ⑭ 点亮 P0.08 发送指示灯，提示用户正在无线发送图像
-    NRF_LOG_INFO("[%u ms] Capture done: frame=%u jpeg=%u bytes (%u ms)",
-                 (unsigned)g_time_ms,
-                 (unsigned)g_image_tx.frame_id,
-                 (unsigned)g_image_tx.frame.jpeg_size,
-                 (unsigned)(g_time_ms - capture_start_ms));                      // ⑮ 打印采集完成时间戳和耗时
 }
 
 /** @brief 非阻塞式图像分片发送状态机，每次最多发送一个分片。 */
 void image_tx_service(void)
 {
-    static uint32_t tx_start_ms;                                                 // 本帧 TX 起始时间戳
     uint16_t remaining;                                                          // 本次要发送的剩余字节数
     uint16_t checksum_index;                                                     // 累加校验和用的循环变量
     uint8_t payload_length;                                                      // 本次实际载荷长度（最后一包可能小于 IMAGE_PAYLOAD_SIZE）
@@ -351,11 +606,6 @@ void image_tx_service(void)
         (g_image_tx.block_pass_index == 0u) &&
         g_image_tx.legacy_send_begin)
     {
-        tx_start_ms = g_time_ms;                                                 //   记录 TX 起始时间戳
-        NRF_LOG_INFO("[%u ms] TX start: frame=%u jpeg=%u bytes",
-                     (unsigned)g_time_ms,
-                     (unsigned)g_image_tx.frame_id,
-                     (unsigned)g_image_tx.block_size);                          //   打印 TX 开始日志
         memset(m_tx_packet, 0, sizeof(m_tx_packet));                             //   清空发送 buffer
         m_tx_packet[0] = LEGACY_CMD_IMAGE_BEGIN;                                 //   命令字：图像开始包
         m_tx_packet[1] = (uint8_t)g_image_tx.frame_id;                           //   帧 ID
@@ -379,8 +629,6 @@ void image_tx_service(void)
                                    &m_tx_packet[LEGACY_IMAGE_PACKET_HEADER_SIZE],
                                    payload_length))
     {
-        NRF_LOG_ERROR("Frame buffer read failed at %u",                      //   读帧缓冲失败：放弃本帧，灭灯返回
-                      (unsigned)(g_image_tx.block_offset + g_image_tx.block_sent));
         g_image_tx.active = false;
         g_image_tx.awaiting_ack = false;
         g_image_tx.retry_count = 0u;
@@ -405,10 +653,6 @@ void image_tx_service(void)
             g_image_tx.fragment_index = 0u;                                   //   分片号和已发字节清零，重新从 0 开始
             g_image_tx.block_sent = 0u;
             g_image_tx.next_fragment_ms = g_time_ms + IMAGE_PASS_GAP_MS;      //   等 IMAGE_PASS_GAP_MS 后再发第二遍
-            NRF_LOG_INFO("TX block repeat pass %u/%u: %s",
-                         (unsigned)(g_image_tx.block_pass_index + 1u),
-                         (unsigned)IMAGE_BLOCK_PASSES,
-                         g_image_tx.config_block ? "JPEG config" : "JPEG image");
             return;                                                           //   返回，等下一轮再来发第二遍的第 0 片
         }
 
@@ -419,11 +663,6 @@ void image_tx_service(void)
         m_tx_packet[10] = g_image_tx.legacy_checksum;                         //   整张图像的 8 位累加校验和
         radio_send_packet(m_tx_packet);                                       //   发送 END 包
         image_tx_led_set(false);                                              //   熄灭 P0.08 发送指示灯
-        NRF_LOG_INFO("[%u ms] TX done: frame=%u (%u ms, checksum=0x%02x)",
-                     (unsigned)g_time_ms,
-                     (unsigned)g_image_tx.frame_id,
-                     (unsigned)(g_time_ms - tx_start_ms),
-                     (unsigned)g_image_tx.legacy_checksum);
         g_image_tx.active = false;                                            // ⑯ 清活动标志，本帧数据已发完
         if (g_image_tx.retry_count == 0u)                                     // ⑰ 首次发送：等待接收端 ACK
         {
@@ -449,9 +688,6 @@ void image_ack_service(void)
     g_image_tx.awaiting_ack = false;                                          // ③ 清 ACK 等待标志（不管后面是否重发，都已超时）
     if (g_image_tx.retry_count >= IMAGE_MAX_RETRIES)                          // ④ 已达到最大重发次数：放弃本帧
     {
-        NRF_LOG_WARNING("[%u ms] Frame abandoned: frame=%u (ack timeout)",
-                        (unsigned)g_time_ms,
-                        (unsigned)g_image_tx.frame_id);
         g_image_tx.retry_count = 0u;
         return;
     }
@@ -462,9 +698,4 @@ void image_ack_service(void)
     g_image_tx.next_fragment_ms = g_time_ms;                                  // ⑨ 允许下一片立即发送
     g_image_tx.active = true;                                                 // ⑩ 重新置位活动标志，让 image_tx_service 进入重发流程
     image_tx_led_set(true);                                                   // ⑪ 点亮 P0.08 指示灯
-    NRF_LOG_WARNING("[%u ms] ACK timeout: frame=%u retry=%u",
-                    (unsigned)g_time_ms,
-                    (unsigned)g_image_tx.frame_id,
-                    (unsigned)g_image_tx.retry_count);
 }
-

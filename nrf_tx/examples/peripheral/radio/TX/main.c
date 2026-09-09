@@ -24,6 +24,17 @@
 #include "nrf_log_default_backends.h"
 #include "ov7676.h"
 
+#if !TX_CONFIG_LOG_ENABLED
+#undef NRF_LOG_INFO
+#undef NRF_LOG_WARNING
+#undef NRF_LOG_ERROR
+#undef NRF_LOG_HEXDUMP_INFO
+#define NRF_LOG_INFO(...)
+#define NRF_LOG_WARNING(...)
+#define NRF_LOG_ERROR(...)
+#define NRF_LOG_HEXDUMP_INFO(...)
+#endif
+
 
 
 /*
@@ -53,11 +64,7 @@ static void watchdog_init(void)
 {
     uint32_t reset_reason = NRF_POWER->RESETREAS;
 
-    /* 若本次上电是看门狗复位导致，输出警告并清除已读取的 RESETREAS。 */
-    if ((reset_reason & POWER_RESETREAS_DOG_Msk) != 0u)
-    {
-        NRF_LOG_WARNING("Previous reset was caused by watchdog timeout");
-    }
+    /* 清除已读取的复位原因；常规运行阶段不输出日志。 */
     NRF_POWER->RESETREAS = reset_reason;
 
     /* CPU 进入 WFE 时看门狗继续运行；调试器暂停 CPU 时看门狗暂停。 */
@@ -69,8 +76,6 @@ static void watchdog_init(void)
     watchdog_feed();
     NRF_WDT->TASKS_START = 1u;
 
-    NRF_LOG_INFO("Watchdog ready: timeout=%u s, run in sleep, pause on debug halt",
-                 (unsigned)WATCHDOG_TIMEOUT_SECONDS);
 }
 
 
@@ -97,8 +102,6 @@ static void timer_init(void)
     NVIC_SetPriority(TIMER1_IRQn, 7u);
     NVIC_EnableIRQ(TIMER1_IRQn);
     NRF_TIMER1->TASKS_START = 1u;
-    NRF_LOG_INFO("TIMER1 ready: 1 ms tick, image period=%u ms",
-                 (unsigned)IMAGE_PERIOD_MS);
 }
 
 
@@ -117,6 +120,9 @@ int main(void)
     uint8_t  cx_revision;
     uint8_t  sensor_revision;
     uint16_t sensor_id;
+    uint32_t config_start_ms;
+    uint32_t led_toggle_ms;
+    bool config_led_on = false;
 
     /* 启动 16 MHz 高频晶振供 Radio 和 CX93510 使用。 */
     image_clock_init();
@@ -126,32 +132,10 @@ int main(void)
     APP_ERROR_CHECK(error);
     NRF_LOG_DEFAULT_BACKENDS_INIT();
 
-	#if 0  /* ==== 测试用：写入固定 SN 到 Flash ==== */
-    /* 测试步骤：
-     *   1. 编译运行此版本，RTT 应打印 "Capsule SN written to Flash"
-     *   2. 烧录后重启（重新上电或按 Reset），应看到 "using Flash-bound SN"
-     *   3. 测试完成后把这段 #if 1 改成 #if 0 即可关闭
-     */
-    {
-        capsule_sn_t test_sn = {{
-            0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88
-        }};
-        NRF_LOG_INFO("=== TEST: Writing fixed SN 0x11..0x88 to Flash ===");
-        capsule_sn_storage_write(&test_sn);
-    }
-	#endif
-	
     /* 从 FICR DEVICEID 读取 8 字节胶囊序列号。 */
     capsule_sn_storage_init();
     capsule_sn_refresh();
 
-    NRF_LOG_INFO("Image radio starting (RTT)");
-    NRF_LOG_INFO("Capsule SN (FICR DEVICEID):");
-    NRF_LOG_HEXDUMP_INFO(g_capsule_sn, sizeof(g_capsule_sn));
-    NRF_LOG_INFO("Image schedule: period=%u ms, repeat=%s, block passes=%u",
-                 (unsigned)IMAGE_PERIOD_MS,
-                 IMAGE_REPEAT_SEND_ENABLED ? "enabled" : "disabled",
-                 (unsigned)IMAGE_BLOCK_PASSES);
 
     /* 启动看门狗。 */
     watchdog_init();
@@ -161,46 +145,97 @@ int main(void)
 
     NRF_LOG_FLUSH();
 
-    /* 初始化 CX93510 JPEG 控制器。 */
+    /* 保持旧工程已验证的启动顺序：先完成图像器件初始化，再开放
+     * Radio配置窗口；3秒从LED开始快闪时才正式计时。 */
     if (!cx93510_init(&cx_revision))
     {
         image_tx_led_set(false);
-        NRF_LOG_ERROR("CX93510 SPI detection/init failed");
         NRF_LOG_FLUSH();
         APP_ERROR_HANDLER(NRF_ERROR_NOT_FOUND);
     }
-    NRF_LOG_INFO("CX93510 detected, revision=%u", (unsigned)cx_revision);
 
-    /* 初始化 OV7676 摄像头。 */
     if (!ov7676_init(&sensor_id, &sensor_revision))
     {
         image_tx_led_set(false);
-        NRF_LOG_ERROR("OV7676 init/ID check failed");
         NRF_LOG_FLUSH();
         APP_ERROR_HANDLER(NRF_ERROR_NOT_FOUND);
     }
-    NRF_LOG_INFO("OV7676 detected, id=0x%04x revision=0x%02x",
-                 sensor_id, sensor_revision);
 
-    /* 配置 Radio 收发链路。 */
     radio_configure_image_link();
-
-    /* 启动 1 ms 周期定时器。 */
     timer_init();
 
-    /* 首帧立即采集。 */
+    capsule_sn_config_window_begin();
+    config_start_ms = g_time_ms;
+    led_toggle_ms = g_time_ms;
+    NRF_LOG_INFO("[SN CONFIG] boot window=%u ms, LED toggle=%u ms",
+                 (unsigned)SN_CONFIG_WINDOW_MS,
+                 (unsigned)SN_CONFIG_LED_TOGGLE_MS);
+    NRF_LOG_HEXDUMP_INFO((const uint8_t *)NRF_FICR->DEVICEID, 8u);
+
+    while (!capsule_sn_config_is_complete())
+    {
+        /* Always process a packet before checking timeout. A valid command
+         * received in the last millisecond therefore resets the full 3 s
+         * inactivity window instead of being discarded at the boundary. */
+        radio_rx_process();
+        if (capsule_sn_config_is_complete())
+        {
+            break;
+        }
+        if ((uint32_t)(g_time_ms -
+                       capsule_sn_config_last_activity_ms()) >=
+            SN_CONFIG_WINDOW_MS)
+        {
+            break;
+        }
+        if ((uint32_t)(g_time_ms - led_toggle_ms) >=
+            SN_CONFIG_LED_TOGGLE_MS)
+        {
+            led_toggle_ms = g_time_ms;
+            config_led_on = !config_led_on;
+            image_tx_led_set(config_led_on);
+        }
+        (void)NRF_LOG_PROCESS();
+        watchdog_feed();
+        __WFE();
+    }
+
+    capsule_sn_config_window_end();
+    image_tx_led_set(false);
+    if (capsule_sn_config_is_complete())
+    {
+        NRF_LOG_INFO("[SN CONFIG] SUCCESS at %u ms; entering normal startup",
+                     (unsigned)(g_time_ms - config_start_ms));
+    }
+    else
+    {
+        NRF_LOG_INFO("[SN CONFIG] TIMEOUT after %u ms; entering normal startup",
+                     (unsigned)(g_time_ms - config_start_ms));
+    }
+    NRF_LOG_FLUSH();
+
+    if (capsule_sn_config_is_complete())
+    {
+        capsule_sn_broadcast_burst(SN_BROADCAST_STARTUP_REPEAT);
+    }
+
+#if IMAGE_TRANSMISSION_ENABLED
+    /* 正式图片模式下首帧立即采集。 */
     g_capture_due = true;
+#endif
 
     /* 主循环：处理接收包 -> ACK 检测 -> 采集请求 -> 分片发送 -> RTT -> 喂狗 -> WFE。 */
     while (true)
     {
         radio_rx_process();
         image_ack_service();
+        capsule_sn_broadcast_service();
+#if IMAGE_TRANSMISSION_ENABLED
         image_capture_task();
         image_tx_service();
+#endif
         (void)NRF_LOG_PROCESS();
         watchdog_feed();
         __WFE();
     }
 }
-

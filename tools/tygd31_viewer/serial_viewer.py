@@ -1,6 +1,6 @@
 """
 serial_viewer.py
-串口实时显示：连接 STM32 UART3，解析 0xFF 0x55 0x12 0x34 帧，
+串口实时显示：连接 STM32 UART3，解析 0x5A 0x41 0x59 0x53（ZAYS）帧，
 提取 JPEG 后显示。
 """
 
@@ -274,5 +274,4 @@ class _SerialReader(QtCore.QThread):
             for f in frames:
                 f.timestamp = time.time()
                 self.frame_received.emit(f)
-
 

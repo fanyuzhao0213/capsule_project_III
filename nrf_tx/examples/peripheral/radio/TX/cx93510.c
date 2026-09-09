@@ -3,12 +3,21 @@
  * @brief CX93510 SPI控制、OV7676代理I2C、JPEG单帧采集和帧缓冲读取。
  */
 #include "cx93510.h"
+#include "config.h"
 
 #include <string.h>
 #include "nrf.h"
 #include "nrf_delay.h"
 #include "nrf_gpio.h"
 #include "nrf_log.h"
+#if !TX_INIT_LOG_ENABLED
+#undef NRF_LOG_INFO
+#undef NRF_LOG_WARNING
+#undef NRF_LOG_ERROR
+#define NRF_LOG_INFO(...)
+#define NRF_LOG_WARNING(...)
+#define NRF_LOG_ERROR(...)
+#endif
 #include "nrf_log_ctrl.h"
 #include "spi_bus.h"
 

@@ -42,12 +42,6 @@ void capsule_sn_storage_init(void);
 const uint8_t *capsule_sn_storage_get_active(void);
 
 /**
- * @brief 判断当前是否已绑定用户设定 SN（Flash 中存在非 0xFF 的数据）。
- * @return true 表示已绑定，false 表示仍使用出厂 DEVICEID。
- */
-bool capsule_sn_storage_is_bound(void);
-
-/**
  * @brief 将新的 8 字节 SN 写入 Flash 并切换 active 指针。
  * @param[in] sn 待写入的序列号指针。
  * @return true 写入成功；false 写入失败（Flash 驱动未实现或参数错误）。
@@ -56,14 +50,4 @@ bool capsule_sn_storage_is_bound(void);
  */
 bool capsule_sn_storage_write(const capsule_sn_t *sn);
 
-/**
- * @brief 监听接收端下发的 SN 设定命令并执行绑定。
- * @note  保留 TYGD31 风格的「接收设定命令 → 校验 → 写入 Flash → 应答」完整流程。
- *        当前实现保留接口签名，内部命令监听/应答逻辑按需补全。
- */
-void capsule_sn_storage_set_checking(void);
-
-
-
 #endif /* TX_CAPSULE_SN_STORAGE_H */
-

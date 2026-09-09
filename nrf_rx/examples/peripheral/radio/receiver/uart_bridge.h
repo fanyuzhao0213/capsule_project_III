@@ -44,6 +44,12 @@ void receiver_uart_init(void);
 /** @brief 主循环收集 UART 字节并在静默超时后通过 RTT 打印整包。 */
 bool receiver_uart_process_received(void);
 
+/** Handle a radio control response before image protocol parsing. */
+bool receiver_control_handle_radio_packet(const uint8_t *packet);
+
+/** Complete timed-out control transactions. */
+bool receiver_control_service(void);
+
 /** @brief 分批把待发送 STM 帧填入 SDK UART FIFO。 */
 bool receiver_uart_tx_service(void);
 
@@ -59,4 +65,3 @@ void TIMER2_IRQHandler(void);
 
 
 #endif /* RX_UART_BRIDGE_H */
-

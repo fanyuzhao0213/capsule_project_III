@@ -68,6 +68,10 @@ void image_tx_service(void);
 /** @brief 处理图像 ACK 超时，并按原始协议重发 DATA 与 END。 */
 void image_ack_service(void);
 
+/** 每 500 ms 广播一次当前生效胶囊 SN（图像链路空闲时）。 */
+void capsule_sn_broadcast_service(void);
+void capsule_sn_broadcast_burst(uint8_t repeat_count);
+
 /** @brief 主循环中轮询并处理收到的 Radio 控制包。 */
 void radio_rx_process(void);
 
@@ -80,6 +84,16 @@ void RADIO_IRQHandler(void);
 /** @brief 重新让 g_capsule_sn 指向 capsule_sn_storage_get_active()（启动时和 SN 重设后调用）。 */
 void capsule_sn_refresh(void);
 
+/** 打开/关闭上电出厂SN配置窗口。 */
+void capsule_sn_config_window_begin(void);
+void capsule_sn_config_window_end(void);
+
+/** 配置窗口内收到0x46且Flash写入成功后返回true。 */
+bool capsule_sn_config_is_complete(void);
+
+/** 最近一次合法出厂SN配置指令到达时刻，供3秒无活动超时判断。 */
+uint32_t capsule_sn_config_last_activity_ms(void);
+
 /** @brief 启动 16 MHz 高频晶振供 Radio 和 CX93510 使用。 */
 void image_clock_init(void);
 
@@ -89,4 +103,3 @@ void radio_configure_image_link(void);
 
 
 #endif /* TX_IMAGE_H */
-

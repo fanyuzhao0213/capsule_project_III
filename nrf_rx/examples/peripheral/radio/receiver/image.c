@@ -7,6 +7,7 @@
  */
 
 #include "image.h"
+#include "binding_storage.h"
 #include "config.h"
 #include "app_uart.h"
 #include "nrf.h"
@@ -15,6 +16,7 @@
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "rf1662.h"
+#include "uart_bridge.h"
 #include <string.h>
 
 
@@ -313,7 +315,10 @@ bool receiver_forward_one(void)
         return false;
     }
     head = m_receiver_queue.head;
-    receiver_process_legacy_packet(m_receiver_queue.data[head]);
+    if (!receiver_control_handle_radio_packet(m_receiver_queue.data[head]))
+    {
+        receiver_process_legacy_packet(m_receiver_queue.data[head]);
+    }
     m_receiver_queue.head = (uint8_t)((head + 1u) % RADIO_QUEUE_DEPTH);
     ++m_receiver_queue.processed;
     if ((m_receiver_queue.processed & 0x1Fu) == 0u)
@@ -403,6 +408,36 @@ void receiver_send_image_ack(uint8_t image_id)
     NRF_LOG_INFO("[ACK] done: frame=%u", (unsigned)image_id);    // ⑦ 出口：ACK 流程完整结束
 }
 
+void receiver_send_control_packet(const uint8_t *packet, uint16_t length,
+                                  uint8_t repeat_count)
+{
+    uint8_t repeat;
+    uint8_t tx_packet[RADIO_PACKET_SIZE] __ALIGNED(4) = {0};
+    if ((packet == NULL) || (length == 0u) ||
+        (length > RADIO_PACKET_SIZE) || (repeat_count == 0u))
+    {
+        return;
+    }
+    memcpy(tx_packet, packet, length);
+    NVIC_DisableIRQ(RADIO_IRQn);
+    receiver_radio_disable();
+    nrf_gpio_pin_set(RECEIVER_MODE_PIN);
+    NRF_RADIO->PACKETPTR = (uint32_t)tx_packet;
+    NRF_RADIO->SHORTS = RADIO_SHORTS_READY_START_Msk |
+                        RADIO_SHORTS_END_DISABLE_Msk;
+    for (repeat = 0u; repeat < repeat_count; ++repeat)
+    {
+        NRF_RADIO->EVENTS_DISABLED = 0u;
+        NRF_RADIO->TASKS_TXEN = 1u;
+        while (NRF_RADIO->EVENTS_DISABLED == 0u) {}
+    }
+    nrf_gpio_pin_clear(RECEIVER_MODE_PIN);
+    NRF_RADIO->SHORTS = receiver_radio_rx_shorts();
+    receiver_radio_arm();
+    NVIC_ClearPendingIRQ(RADIO_IRQn);
+    NVIC_EnableIRQ(RADIO_IRQn);
+}
+
 /** @brief 将已校验图片封装为 STM32 帧并加入异步 UART 发送队列。 */
 bool receiver_forward_complete_image(void)
 {
@@ -453,6 +488,20 @@ void receiver_process_legacy_packet(const uint8_t *packet)
     uint16_t offset;
     uint16_t index;
     uint8_t checksum = 0u;
+
+    if ((packet[0] == LEGACY_CMD_IMAGE_BEGIN) ||
+        (packet[0] == LEGACY_CMD_IMAGE_DATA) ||
+        (packet[0] == LEGACY_CMD_IMAGE_END))
+    {
+//        if (!receiver_binding_matches(&packet[2]))
+//        {
+//            if (packet[0] == LEGACY_CMD_IMAGE_BEGIN)
+//            {
+//                NRF_LOG_INFO("Image ignored: RX unbound or SN mismatch");
+//            }
+//            return;
+//        }
+    }
 
     if (packet[0] == LEGACY_CMD_IMAGE_BEGIN)
     {

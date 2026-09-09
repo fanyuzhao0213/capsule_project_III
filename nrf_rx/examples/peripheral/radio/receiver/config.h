@@ -100,7 +100,7 @@
 #define UART_TX_SERVICE_BUDGET   64u
 
 /** STM 一包数据结束的判定：最后一个字节后连续无新字节的时长，单位 us。 */
-#define UART_RX_IDLE_TIMEOUT_US  500000u
+#define UART_RX_IDLE_TIMEOUT_US  100000u
 
 /** UART 单包最大字节数。 */
 #define UART_RX_PACKET_MAX_SIZE  1024u

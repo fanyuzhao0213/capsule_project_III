@@ -399,6 +399,11 @@
               <FilePath>..\..\..\uart_bridge.c</FilePath>
             </File>
             <File>
+              <FileName>binding_storage.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\binding_storage.c</FilePath>
+            </File>
+            <File>
               <FileName>image.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\image.c</FilePath>
@@ -472,6 +477,11 @@
               <FileName>nrfx_uart.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\..\..\..\..\modules\nrfx\drivers\src\nrfx_uart.c</FilePath>
+            </File>
+            <File>
+              <FileName>nrfx_uarte.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\..\..\..\..\modules\nrfx\drivers\src\nrfx_uarte.c</FilePath>
             </File>
             <File>
               <FileName>radio_config.c</FileName>
