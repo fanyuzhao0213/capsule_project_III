@@ -28,6 +28,10 @@ typedef struct
     uint8_t version_main;                           /** 当前帧 BEGIN 包中读取的胶囊固件主版本号。 */
     uint8_t version_sub;                            /** 当前帧 BEGIN 包中读取的胶囊固件子版本号。 */
     uint8_t version_test;                           /** 当前帧 BEGIN 包中读取的胶囊固件测试版本号。 */
+    bool accel_valid;                               /** BEGIN扩展中的ADXL362数据是否有效。 */
+    int16_t accel_x_raw;                            /** ADXL362 X轴原始值。 */
+    int16_t accel_y_raw;                            /** ADXL362 Y轴原始值。 */
+    int16_t accel_z_raw;                            /** ADXL362 Z轴原始值。 */
     uint16_t received_count;                        /** 已收到的分片计数。 */
     uint8_t received_map[(LEGACY_IMAGE_MAX_SIZE +
                           LEGACY_IMAGE_PACKET_PAYLOAD_SIZE - 1u) /
@@ -71,6 +75,12 @@ void receiver_process_legacy_packet(const uint8_t *packet);
  */
 bool receiver_forward_complete_image(void);
 
+/** @brief 缓存从0x05广播提取出的8字节胶囊SN，供设备信息组装使用。 */
+void receiver_device_info_update_capsule_sn(const uint8_t *capsule_sn);
+
+/** @brief UART TX FIFO与硬件发送均结束后，记录真正交付STM32的帧率。 */
+void receiver_note_stm_forwarded(uint8_t image_id, uint16_t image_length);
+
 /**
  * @brief 向发送端发送两次原始协议图片接收完成应答。
  * @param image_id 已完整接收的图片编号。
@@ -96,6 +106,24 @@ void receiver_radio_init(void);
  * @return 最终选择的天线下标，0 表示 ANT1，11 表示 ANT12。
  */
 uint8_t receiver_scan_best_antenna(void);
+
+/** @brief 初始化未绑定发现扫描状态机。 */
+void receiver_antenna_manager_init(void);
+
+/** @brief 非阻塞推进发现、目标选优和失联重扫状态机。 */
+bool receiver_antenna_service(void);
+
+/** @brief 绑定或解绑完成后立即切换相应天线策略。 */
+void receiver_antenna_binding_changed(void);
+
+/** @brief 完整接收绑定胶囊图片后刷新链路存活时间。 */
+void receiver_antenna_note_complete_image(void);
+
+/** @brief 未绑定状态收到SN后延长当前发现天线驻留时间。 */
+void receiver_antenna_note_discovery_sn(void);
+
+/** @brief RTC2天线管理节拍中断。 */
+void RTC2_IRQHandler(void);
 
 /**
  * @brief Radio 收包中断。

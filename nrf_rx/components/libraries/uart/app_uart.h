@@ -236,6 +236,22 @@ uint32_t app_uart_get(uint8_t * p_byte);
  */
 uint32_t app_uart_put(uint8_t byte);
 
+/**@brief Start one non-blocking UART EasyDMA buffer transmission.
+ *
+ * This extension is intended for large application-owned buffers. The normal
+ * APP_UART TX FIFO must be empty and the buffer must remain valid until
+ * APP_UART_TX_EMPTY is reported.
+ *
+ * @param[in] p_data  Data in RAM to transmit.
+ * @param[in] length  Number of bytes; 1..255 when EasyDMA is enabled.
+ *
+ * @retval NRF_SUCCESS             Transmission started.
+ * @retval NRF_ERROR_BUSY          UART or APP_UART TX FIFO is busy.
+ * @retval NRF_ERROR_INVALID_PARAM p_data is NULL.
+ * @retval NRF_ERROR_INVALID_LENGTH length is zero or exceeds DMA capacity.
+ */
+uint32_t app_uart_tx_buffer(const uint8_t *p_data, uint16_t length);
+
 /**@brief Function for flushing the RX and TX buffers (Only valid if FIFO is used).
  *        This function does nothing if FIFO is not used.
  *

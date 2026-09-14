@@ -39,6 +39,45 @@
 /** @brief STM32 主控期望的图像帧固定头部长度（含 FF 55 12 34 标识与长度字段）。 */
 #define LEGACY_STM_FRAME_HEADER_SIZE            7u
 
+/* 128字节设备信息由TX、RX、STM32逐级补齐；未定义/未采集字段必须保持0。 */
+#define LEGACY_DEVICE_INFO_MARKER_OFFSET          0u
+#define LEGACY_DEVICE_INFO_MARKER_SIZE            5u
+#define LEGACY_DEVICE_INFO_TX_VERSION_MAIN_OFFSET 5u
+#define LEGACY_DEVICE_INFO_TX_VERSION_SUB_OFFSET  6u
+#define LEGACY_DEVICE_INFO_RX_VERSION_MAIN_OFFSET 7u
+#define LEGACY_DEVICE_INFO_RX_VERSION_SUB_OFFSET  8u
+#define LEGACY_DEVICE_INFO_STM_VERSION_MAIN_OFFSET 9u
+#define LEGACY_DEVICE_INFO_STM_VERSION_SUB_OFFSET 10u
+#define LEGACY_DEVICE_INFO_CAPSULE_SN_OFFSET      11u
+#define LEGACY_DEVICE_INFO_RX_DEVICE_ID_OFFSET    19u
+#define LEGACY_DEVICE_INFO_RX_DEVICE_ID_SIZE       8u
+#define LEGACY_DEVICE_INFO_STM_DEVICE_ID_OFFSET   27u
+#define LEGACY_DEVICE_INFO_STM_DEVICE_ID_SIZE     12u
+#define LEGACY_DEVICE_INFO_ANT_RSSI_1_6_OFFSET    39u
+#define LEGACY_DEVICE_INFO_STM_UPTIME_OFFSET      45u
+#define LEGACY_DEVICE_INFO_ACTIVE_ANTENNA_OFFSET  49u
+#define LEGACY_DEVICE_INFO_RADIO_FREQUENCY_OFFSET 50u
+#define LEGACY_DEVICE_INFO_ANT_RSSI_7_12_OFFSET   51u
+#define LEGACY_DEVICE_INFO_TX_VERSION_TEST_OFFSET 61u
+#define LEGACY_DEVICE_INFO_RX_VERSION_TEST_OFFSET 62u
+#define LEGACY_DEVICE_INFO_STM_VERSION_TEST_OFFSET 63u
+#define LEGACY_DEVICE_INFO_JPEG_LENGTH_OFFSET     65u
+#define LEGACY_DEVICE_INFO_RTC_OFFSET             70u
+#define LEGACY_DEVICE_INFO_RTC_SIZE                7u
+#define LEGACY_DEVICE_INFO_PREVIOUS_RTC_OFFSET    83u
+
+/** BEGIN包中的ADXL362原始数据扩展；旧接收端会把该区域当作Reserved忽略。 */
+#define LEGACY_BEGIN_ACCEL_VALID_OFFSET         17u
+#define LEGACY_BEGIN_ACCEL_X_OFFSET             18u
+#define LEGACY_BEGIN_ACCEL_Y_OFFSET             20u
+#define LEGACY_BEGIN_ACCEL_Z_OFFSET             22u
+
+/** RX转发给STM32时，ADXL362扩展在128字节DeviceInfo中的位置。 */
+#define LEGACY_DEVICE_INFO_ACCEL_VALID_OFFSET   90u
+#define LEGACY_DEVICE_INFO_ACCEL_X_OFFSET       91u
+#define LEGACY_DEVICE_INFO_ACCEL_Y_OFFSET       93u
+#define LEGACY_DEVICE_INFO_ACCEL_Z_OFFSET       95u
+
 
 
 /* ============================================================
@@ -112,6 +151,18 @@ static inline void LegacyProtocol_PutU16Be(uint8_t *destination, uint16_t value)
 {
     destination[0] = (uint8_t)(value >> 8);                      // 高字节写入 buffer 前部
     destination[1] = (uint8_t)value;                             // 低字节写入 buffer 后部
+}
+
+/** 从协议缓冲区读取大端二补码16位有符号整数。 */
+static inline int16_t LegacyProtocol_GetI16Be(const uint8_t *source)
+{
+    return (int16_t)LegacyProtocol_GetU16Be(source);
+}
+
+/** 向协议缓冲区写入大端二补码16位有符号整数。 */
+static inline void LegacyProtocol_PutI16Be(uint8_t *destination, int16_t value)
+{
+    LegacyProtocol_PutU16Be(destination, (uint16_t)value);
 }
 
 #endif /* LEGACY_PROTOCOL_H */

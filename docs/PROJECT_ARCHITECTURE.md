@@ -27,8 +27,8 @@ CX93510 + OV7676
 2. 打开3秒SN配置窗口，LED快速闪烁。
 3. 合法的`0x40/0x42/0x44/0x46`会刷新3秒无操作计时。
 4. `0x46`写入Flash成功后立即结束配置窗口。
-5. 配置成功后连续广播3次SN，之后每500ms广播一次。
-6. `IMAGE_TRANSMISSION_ENABLED=0`时只广播SN；设为`1`后每500ms触发一次图片采集。
+5. 配置窗口结束后，无论配置成功还是超时，都连续广播3次当前生效SN，之后每300ms广播一次。
+6. 当前`IMAGE_TRANSMISSION_ENABLED=1`，每300ms触发一次图片采集与无线发送；设为`0`时只广播SN。
 
 ### NRF_RX
 
@@ -106,6 +106,7 @@ TX配置集中在`nrf_tx/examples/peripheral/radio/TX/config.h`：
 - `TX_CONFIG_LOG_ENABLED`：SN配置日志。
 - `TX_INIT_LOG_ENABLED`：摄像头/SPI初始化日志。
 - `IMAGE_TRANSMISSION_ENABLED`：图片采集和发送总开关。
+- TX与RX之间的图像分片格式、校验及重发规则统一见`docs/TX_RX_IMAGE_PROTOCOL.md`。
 
 RX配置集中在`nrf_rx/examples/peripheral/radio/receiver/config.h`：
 

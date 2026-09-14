@@ -394,6 +394,11 @@
               <FilePath>..\..\..\spi_bus.c</FilePath>
             </File>
             <File>
+              <FileName>dev_adxl362.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\dev_adxl362.c</FilePath>
+            </File>
+            <File>
               <FileName>cx93510.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\cx93510.c</FilePath>
@@ -412,6 +417,11 @@
               <FileName>image.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\image.c</FilePath>
+            </File>
+            <File>
+              <FileName>tx_runtime_log.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\tx_runtime_log.c</FilePath>
             </File>
             <File>
               <FileName>capsule_sn_storage.c</FileName>

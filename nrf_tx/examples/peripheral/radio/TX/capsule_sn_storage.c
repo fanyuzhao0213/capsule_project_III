@@ -10,7 +10,7 @@
 #include "nrf_log.h"
 #include <string.h>
 
-#if !TX_CONFIG_LOG_ENABLED
+#if !(TX_LOG_ENABLED && TX_CONFIG_LOG_ENABLED)
 #undef NRF_LOG_INFO
 #undef NRF_LOG_WARNING
 #undef NRF_LOG_ERROR

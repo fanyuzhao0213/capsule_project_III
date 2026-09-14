@@ -10,7 +10,7 @@
 #include "nrf_delay.h"
 #include "nrf_gpio.h"
 #include "nrf_log.h"
-#if !TX_INIT_LOG_ENABLED
+#if !(TX_LOG_ENABLED && TX_INIT_LOG_ENABLED)
 #undef NRF_LOG_INFO
 #undef NRF_LOG_WARNING
 #undef NRF_LOG_ERROR

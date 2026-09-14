@@ -78,6 +78,8 @@
     <folder Name="Application">
       <file file_name="../../../main.c" />
       <file file_name="../../../spi_bus.c" />
+      <file file_name="../../../dev_adxl362.c" />
+      <file file_name="../../../tx_runtime_log.c" />
       <file file_name="../../../cx93510.c" />
       <file file_name="../../../ov7676.c" />
       <file file_name="../config/sdk_config.h" />
@@ -101,5 +103,3 @@
     gcc_optimization_level="None"/>
 
 </solution>
-
-

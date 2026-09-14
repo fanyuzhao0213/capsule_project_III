@@ -41,7 +41,7 @@
 | `0x46` | PC → NRF_TX | NRF_TX | 确认把暂存SN写入Flash，无数据 |
 | `0x47` | NRF_TX → PC | NRF_TX | 确认写入成功，无数据 |
 | `0x49` | NRF_TX → PC | NRF_TX | 出厂SN配置错误，无数据 |
-| `0x05` | NRF_TX → NRF_RX → PC | NRF_TX | 当前生效 SN，8 字节；配置成功立即发 3 次，之后每 500 ms 广播 |
+| `0x05` | NRF_TX → NRF_RX → PC | NRF_TX | 当前生效 SN，8 字节；配置成功立即发 3 次，之后每 300 ms 广播 |
 | `0x81` | NRF_TX → PC | 各端协作 | JPEG 图片数据 + 128 字节设备信息 |
 
 ## 无线可靠性
@@ -58,6 +58,6 @@
 
 ## 当前联调模式
 
-- `IMAGE_TRANSMISSION_ENABLED = 0`：NRF_TX 暂不采集和发送图片。
-- SN 配置成功后立即广播 3 次，随后主循环每 500 ms 广播一次。
-- 后续需要恢复图片时，将该开关改为 `1`；图片周期仍为 500 ms。
+- 当前 `IMAGE_TRANSMISSION_ENABLED = 1`：NRF_TX 每300ms请求采集并发送图片；改为0时只保留SN广播。
+- SN 配置成功后立即广播 3 次，随后主循环每 300 ms 广播一次。
+- 图片采集请求周期为 300 ms；上一帧未完成时跳过本次请求。

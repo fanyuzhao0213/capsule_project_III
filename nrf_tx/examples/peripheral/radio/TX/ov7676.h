@@ -16,4 +16,10 @@
  */
 bool ov7676_init(uint16_t *chip_id, uint8_t *revision);
 
+/** @brief 将OV7676切换到软件休眠模式，保留已写入的寄存器配置。 */
+bool ov7676_sleep(void);
+
+/** @brief 从软件休眠唤醒OV7676，恢复连续视频输出。 */
+bool ov7676_wakeup(void);
+
 #endif

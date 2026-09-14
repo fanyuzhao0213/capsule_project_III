@@ -289,6 +289,32 @@ uint32_t app_uart_put(uint8_t byte)
 }
 
 
+uint32_t app_uart_tx_buffer(const uint8_t *p_data, uint16_t length)
+{
+    if (p_data == NULL)
+    {
+        return NRF_ERROR_INVALID_PARAM;
+    }
+    if (length == 0u)
+    {
+        return NRF_ERROR_INVALID_LENGTH;
+    }
+#if UART0_CONFIG_USE_EASY_DMA
+    /* nRF52832 UARTE0 MAXCNT is 8 bits. */
+    if (length > 255u)
+    {
+        return NRF_ERROR_INVALID_LENGTH;
+    }
+#endif
+    if ((FIFO_LENGTH(m_tx_fifo) != 0u) ||
+        nrf_drv_uart_tx_in_progress(&app_uart_inst))
+    {
+        return NRF_ERROR_BUSY;
+    }
+    return nrf_drv_uart_tx(&app_uart_inst, p_data, length);
+}
+
+
 uint32_t app_uart_close(void)
 {
     nrf_drv_uart_uninit(&app_uart_inst);

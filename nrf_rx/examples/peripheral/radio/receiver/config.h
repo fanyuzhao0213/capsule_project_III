@@ -12,6 +12,12 @@
 #include <stdint.h>
 #include "legacy_protocol.h"
 
+/** 1：统计完整图片从Radio BEGIN到UART实际发送完毕的耗时和有效帧率。 */
+#define RX_FRAME_RATE_LOG_ENABLED 1u
+
+/** 1：每帧打印RX刚生成、尚未由STM补充的128字节DeviceInfo。 */
+#define RX_DEVICE_INFO_LOG_ENABLED 1u
+
 
 
 /* ============================================================
@@ -20,13 +26,10 @@
 
 /** 接收板固件主版本号。 */
 #define VERSION_MAIN               (1)
-
 /** 接收板固件子版本号。 */
 #define VERSION_SUB                (1)
-
 /** 接收板固件测试版本号。 */
 #define VERSION_TEST               (0)
-
 
 
 /* ============================================================
@@ -35,6 +38,10 @@
 
 /** Radio 物理层固定有效载荷字节数（与协议包长度一致）。 */
 #define RADIO_PACKET_SIZE        LEGACY_RADIO_PACKET_SIZE
+
+/** Radio 工作频率；必须与 TX 保持一致。 */
+#define RADIO_FREQUENCY_MHZ      2410u
+#define RADIO_FREQUENCY_OFFSET   (RADIO_FREQUENCY_MHZ - 2400u)
 
 /** Radio 接收队列深度。 */
 #define RADIO_QUEUE_DEPTH        8u
@@ -60,11 +67,28 @@
 /** 启动时固定选择的天线：0=ANT1，11=ANT12。 */
 #define RF1662_DEFAULT_ANTENNA   0u
 
-/** 上电时扫描全部 12 根天线；置 0 时直接使用 RF1662_DEFAULT_ANTENNA。 */
-#define RF1662_STARTUP_SCAN_ENABLED 1u
+/** 未绑定发现状态下每根天线驻留650ms，可覆盖一次500ms SN广播。 */
+#define RF1662_DISCOVERY_DWELL_MS 650u
+
+/** 发现SN后继续驻留当前天线，保证STM32能收到重复广播。 */
+#define RF1662_DISCOVERY_FOUND_HOLD_MS 1500u
+
+/** 绑定目标选优时每根天线的采样时间。 */
+#define RF1662_TARGET_SCAN_DWELL_MS   8u
+
+/** 绑定后快速交错扫描完整循环次数。 */
+#define RF1662_TARGET_SCAN_ROUNDS     5u
+
+/** 固定接收阶段的分级失联判断。 */
+#define RF1662_TARGET_PACKET_TIMEOUT_MS 1500u
+#define RF1662_COMPLETE_IMAGE_TIMEOUT_MS 4000u
+#define RF1662_FAILED_FRAME_LIMIT         3u
+
+/** 天线管理状态机调度粒度。 */
+#define RF1662_SERVICE_TICK_MS       4u
 
 /**
- * 每根天线的扫描驻留时间，必须大于 TX 的 500 ms 发图周期，确保每路
+ * 每根天线的扫描驻留时间，大于 TX 的 500 ms 发图周期，确保每路
  * 至少覆盖一段有效无线数据。总启动扫描时间约为本值乘以 12。
  */
 #define RF1662_SCAN_DWELL_MS     650u
@@ -96,8 +120,8 @@
 /** 单次 RTT HEXDUMP 输出的字节数。 */
 #define UART_RX_LOG_CHUNK        32u
 
-/** 每轮最多向 UART FIFO 填入的字节数，防止长时间占用主循环。 */
-#define UART_TX_SERVICE_BUDGET   64u
+/** 单次UARTE EasyDMA发送块；nRF52832 MAXCNT为8位，最大255字节。 */
+#define UART_TX_DMA_CHUNK_SIZE   255u
 
 /** STM 一包数据结束的判定：最后一个字节后连续无新字节的时长，单位 us。 */
 #define UART_RX_IDLE_TIMEOUT_US  100000u
@@ -110,12 +134,6 @@
 
 /** 接收板外部模式控制脚：接收期间保持低电平，发送 ACK 时短暂拉高。 */
 #define RECEIVER_MODE_PIN        23u
-
-/**
- * 启动时是否通过 UART 发送一次 ASCII 测试串给 STM/PC。
- * 正式产品若不希望出现测试文字，置 0 即可；图像包始终保持纯透传。
- */
-#define UART_BRIDGE_STARTUP_TEST 1u
 
 
 

@@ -1,4 +1,6 @@
-# OV7676 + CX93510 + nRF52832 图像采集与传输说明
+# OV7676 + CX93510 + nRF52832 图像采集与传输说明（旧版）
+
+> 警告：本文中的 `IMG + CRC16` 分包格式已经停用，不能用于当前TX/RX联调。当前固定254字节的 `0x01/0x80/0x03/0x10` 正式协议见项目根目录 `docs/TX_RX_IMAGE_PROTOCOL.md`。
 
 ## 1. 系统目标
 
@@ -8,10 +10,10 @@
 
 - 图像尺寸：480 x 480。
 - OV7676输出：YUV422，字节顺序 Y0/U/Y1/V。
-- JPEG模式：CX93510直接帧，标准量化表，低压缩率/高画质。
-- 图像采集请求周期：500 ms。
+- JPEG模式：CX93510直接帧，使用亮度低压缩/色度高压缩的折中档，保持480×480分辨率。
+- 图像采集请求周期：300 ms。
 - 每个配置块和JPEG块默认只发送一遍。
-- 无线频率：2400 MHz。
+- 无线频率：2410 MHz。
 - 无线速率：Nordic 1 Mbit。
 - 无线发射功率：nRF52832最高的 +4 dBm。
 - 固定无线包长度：254字节。
@@ -28,7 +30,7 @@ CX93510
   |  SPI读取
   v
 nRF52832摄像头发送板
-  |  2400 MHz，1 Mbit，254字节固定Radio包
+  |  2410 MHz，1 Mbit，254字节固定Radio包
   v
 nRF52832专用接收板
   |  UART TX=P0.15，1 Mbps
@@ -137,8 +139,8 @@ OV7676不是直接连接到nRF的I2C外设，而是由nRF通过SPI操作CX93510�
 ### 6.4 JPEG编码器
 
 - `DIFF_JPEG_CTRL.bit0=0`：关闭差分JPEG，使用直接帧模式。
-- `JPEG_ENC_DCT_LM=0x00`：亮度使用标准量化表。
-- `JPEG_ENC_DCT_CH=0x01`：色度使用标准量化表。
+- `JPEG_ENC_DCT_LM=0x00`：亮度使用低压缩量化表，保留轮廓和纹理细节。
+- `JPEG_ENC_DCT_CH=0x03`：色度使用高压缩量化表。
 - `JPEG_ENC_CTL1.RELOAD_TABLES=1`：压缩器复位后重新加载量化表和Huffman表。
 
 `RELOAD_TABLES`必须置1。否则帧缓冲可能只产生`0x10`图像块，而没有包含DQT/DHT的`0x40`配置块，标准Qt JPEG解码器会报告“Quantization table 0x00 was not defined”。
@@ -249,7 +251,7 @@ JPEG分片 = ceil(15930 / 236) = 68包
 图像发送参数位于摄像头角色的`main.c`顶部：
 
 ```c
-#define IMAGE_PERIOD_MS           500u
+#define IMAGE_PERIOD_MS           300u
 #define IMAGE_FRAGMENT_GAP_MS     1u
 #define IMAGE_REPEAT_SEND_ENABLED 0
 #define IMAGE_PASS_GAP_MS         20u
@@ -283,17 +285,17 @@ JPEG分片 = ceil(15930 / 236) = 68包
 
 两个副本的帧号、块类型、分片号、载荷和CRC完全一致。Qt使用字典按分片编号保存，已经收到的重复分片不会覆盖或重复追加。
 
-### 11.3 500 ms周期的含义
+### 11.3 300 ms周期的含义
 
-TIMER1每1 ms中断一次，每累计500 ms设置一次采集请求标志。真正的采集和SPI读取在主循环中进行，不在定时中断内执行。
+正常运行时由32.768 kHz低频时钟驱动RTC2，每300 ms只设置一次采集和SN广播请求标志。真正的采集、SPI读取和Radio操作仍在主循环中执行，不在RTC中断内执行。TIMER1的1 ms时基仅在摄像头预热、图像分包发送和等待ACK期间开启；业务空闲后停止TIMER1并释放外部高频晶振，由RTC2再次唤醒。
 
-如果上一帧在下一个500 ms时刻仍未发送完，程序输出：
+如果上一帧在下一个300 ms时刻仍未发送完，程序输出：
 
 ```text
 Image period skipped: previous frame still transmitting
 ```
 
-并跳过本次请求，避免CX93510帧缓冲覆盖正在发送的数据。因此500 ms是请求间隔，实际帧率还受JPEG大小、分片间隔、无线发送耗时和是否重复发送影响。
+并跳过本次请求，避免CX93510帧缓冲覆盖正在发送的数据。因此300 ms是请求间隔，实际帧率还受JPEG大小、分片间隔、无线发送耗时和是否重复发送影响。
 
 ## 12. 发送状态机
 
@@ -379,7 +381,7 @@ Qt正常结果：
 ## 17. 相关文件
 
 - `app_role.h`：选择摄像头发送角色或专用接收角色。
-- `main.c`：500 ms调度、Radio配置、图像协议、分片和发送状态机。
+- `main.c`：300 ms调度、Radio配置、图像协议、分片和发送状态机。
 - `spi_bus.c/.h`：nRF52832与CX93510的SPI底层传输。
 - `cx93510.c/.h`：CX93510初始化、代理I2C、JPEG采集和帧缓冲读取。
 - `ov7676.c/.h`：OV7676上电、量产寄存器表、关键配置回读。

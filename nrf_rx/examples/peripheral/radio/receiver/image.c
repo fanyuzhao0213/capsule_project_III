@@ -74,6 +74,84 @@ static volatile uint32_t m_antenna_scan_crc_ok;
 /** 当前天线扫描窗口内 CRC 正确包的 RSSI 幅值累加值。 */
 static volatile uint32_t m_antenna_scan_rssi_sum;
 
+typedef enum
+{
+    ANTENNA_MODE_DISCOVERY = 0,
+    ANTENNA_MODE_TARGET_SCAN,
+    ANTENNA_MODE_LOCKED
+} antenna_mode_t;
+
+static antenna_mode_t m_antenna_mode;
+static uint8_t m_scan_antenna;
+static uint8_t m_scan_round;
+static uint32_t m_scan_packet_count[RF1662_ANTENNA_COUNT];
+static uint32_t m_scan_rssi_sum[RF1662_ANTENNA_COUNT];
+/** 最近一次在各天线上收到目标有效包时的RSSI幅值；0表示尚无样本。 */
+static volatile uint8_t m_latest_antenna_rssi[RF1662_ANTENNA_COUNT];
+static uint8_t m_last_capsule_sn[LEGACY_CAPSULE_SN_SIZE];
+static bool m_last_capsule_sn_valid;
+static uint8_t m_candidate_antenna[3];
+static uint8_t m_candidate_count;
+static uint8_t m_candidate_index;
+static uint32_t m_antenna_deadline_ms;
+static bool m_discovery_holding;
+static volatile uint32_t m_last_target_packet_ms;
+static uint32_t m_last_complete_image_ms;
+static uint8_t m_failed_frame_count;
+static volatile uint32_t m_antenna_time_ms;
+static volatile bool m_antenna_service_due;
+
+/** 最终有效帧率统计：Radio重组、UART忙丢帧和STM交付分别计数。 */
+static uint32_t m_rx_frame_begin_ticks;
+static uint32_t m_rx_radio_duration_ms;
+static uint32_t m_stm_frame_begin_ticks;
+static uint32_t m_stm_queue_start_ticks;
+static uint32_t m_stm_radio_duration_ms;
+static uint32_t m_last_stm_forward_ticks;
+static uint32_t m_complete_frame_count;
+static uint32_t m_forwarded_frame_count;
+static uint32_t m_uart_busy_drop_count;
+static uint32_t m_incomplete_end_count;
+static uint32_t m_checksum_failure_count;
+static uint32_t m_replaced_frame_count;
+static bool m_have_last_stm_forward;
+
+/** RTC2运行在1024Hz；24位差值乘125再除128可精确换算为毫秒。 */
+static uint32_t receiver_perf_elapsed_ms(uint32_t start_ticks,
+                                         uint32_t end_ticks)
+{
+    uint32_t elapsed_ticks = (end_ticks - start_ticks) & 0x00FFFFFFu;
+    return (elapsed_ticks * 125u) >> 7;
+}
+
+/** @brief 判断CRC正确包是否属于当前绑定胶囊。 */
+static bool receiver_packet_matches_bound_sn(const uint8_t *packet)
+{
+    if (!receiver_binding_is_bound())
+    {
+        return false;
+    }
+    if (packet[0] == LEGACY_CMD_CAPSULE_SN_BROADCAST)
+    {
+        return receiver_binding_matches(&packet[1]);
+    }
+    if ((packet[0] == LEGACY_CMD_IMAGE_BEGIN) ||
+        (packet[0] == LEGACY_CMD_IMAGE_DATA) ||
+        (packet[0] == LEGACY_CMD_IMAGE_END))
+    {
+        return receiver_binding_matches(&packet[2]);
+    }
+    return false;
+}
+
+/** @brief 未绑定时只让SN广播和ZAYS配置应答进入软件队列。 */
+static bool receiver_unbound_packet_is_needed(const uint8_t *packet)
+{
+    return (packet[0] == LEGACY_CMD_CAPSULE_SN_BROADCAST) ||
+           ((packet[0] == 0x5Au) && (packet[1] == 0x41u) &&
+            (packet[2] == 0x59u) && (packet[3] == 0x53u));
+}
+
 /** @brief 接收模式统一使用的快捷方式，同时在 ADDRESS 事件启动 RSSI 采样。 */
 static uint32_t receiver_radio_rx_shorts(void)
 {
@@ -119,7 +197,7 @@ void receiver_radio_arm(void)
 void receiver_radio_init(void)
 {
     NRF_RADIO->TXPOWER = RECEIVER_ACK_TX_POWER;
-    NRF_RADIO->FREQUENCY = 0u;
+    NRF_RADIO->FREQUENCY = RADIO_FREQUENCY_OFFSET;
     NRF_RADIO->MODE = RADIO_MODE_MODE_Nrf_2Mbit;
     NRF_RADIO->PREFIX0 = 0xC4C3C2E7u;
     NRF_RADIO->PREFIX1 = 0xC5C6C7C8u;
@@ -143,7 +221,8 @@ void receiver_radio_init(void)
     NVIC_SetPriority(RADIO_IRQn, RADIO_IRQ_PRIORITY);
     NVIC_EnableIRQ(RADIO_IRQn);
     receiver_radio_arm();
-    NRF_LOG_INFO("Dedicated RX RADIO ready: 2400 MHz, 2 Mbit, legacy packet=%u bytes",
+    NRF_LOG_INFO("Dedicated RX RADIO ready: %u MHz, 2 Mbit, legacy packet=%u bytes",
+                 (unsigned)RADIO_FREQUENCY_MHZ,
                  (unsigned)RADIO_PACKET_SIZE);
 }
 
@@ -155,10 +234,30 @@ void RADIO_IRQHandler(void)
         NRF_RADIO->EVENTS_END = 0u;
         NRF_RADIO->TASKS_RSSISTOP = 1u;
 
+        if ((NRF_RADIO->CRCSTATUS != 0u) &&
+            (receiver_packet_matches_bound_sn(m_receiver_packet) ||
+             (!receiver_binding_is_bound() &&
+              receiver_unbound_packet_is_needed(m_receiver_packet))))
+        {
+            uint8_t antenna = rf1662_get_antenna();
+            if (antenna < RF1662_ANTENNA_COUNT)
+            {
+                m_latest_antenna_rssi[antenna] =
+                    (uint8_t)NRF_RADIO->RSSISAMPLE;
+            }
+        }
+
+        if ((NRF_RADIO->CRCSTATUS != 0u) &&
+            receiver_packet_matches_bound_sn(m_receiver_packet))
+        {
+            m_last_target_packet_ms = m_antenna_time_ms;
+        }
+
         if (m_antenna_scan_active)
         {
             ++m_antenna_scan_total;
-            if (NRF_RADIO->CRCSTATUS != 0u)
+            if ((NRF_RADIO->CRCSTATUS != 0u) &&
+                receiver_packet_matches_bound_sn(m_receiver_packet))
             {
                 ++m_antenna_scan_crc_ok;
                 m_antenna_scan_rssi_sum += NRF_RADIO->RSSISAMPLE;
@@ -167,7 +266,9 @@ void RADIO_IRQHandler(void)
             return;
         }
 
-        if (NRF_RADIO->CRCSTATUS != 0u)
+        if ((NRF_RADIO->CRCSTATUS != 0u) &&
+            (receiver_binding_is_bound() ||
+             receiver_unbound_packet_is_needed(m_receiver_packet)))
         {
             uint8_t tail = m_receiver_queue.tail;
             uint8_t next = (uint8_t)((tail + 1u) % RADIO_QUEUE_DEPTH);
@@ -185,6 +286,82 @@ void RADIO_IRQHandler(void)
         }
         receiver_radio_arm();
     }
+}
+
+/** @brief 保存独立SN广播中的有效字段，不保存Radio填充区。 */
+void receiver_device_info_update_capsule_sn(const uint8_t *capsule_sn)
+{
+    if (capsule_sn == NULL)
+    {
+        return;
+    }
+    memcpy(m_last_capsule_sn, capsule_sn, LEGACY_CAPSULE_SN_SIZE);
+    m_last_capsule_sn_valid = true;
+}
+
+/** @brief 按TYGD31固定偏移生成TX+RX部分设备信息，STM字段留0。 */
+static void receiver_build_device_info(uint8_t *device_info)
+{
+    static const uint8_t marker[LEGACY_DEVICE_INFO_MARKER_SIZE] =
+        {0x00u, 0x55u, 0xAAu, 0x88u, 0x99u};
+    const uint8_t *capsule_sn = g_legacy_image_rx.capsule_sn;
+    const uint8_t *rx_device_id = (const uint8_t *)NRF_FICR->DEVICEID;
+    uint8_t antenna;
+
+    memset(device_info, 0, LEGACY_DEVICE_INFO_SIZE);
+    memcpy(&device_info[LEGACY_DEVICE_INFO_MARKER_OFFSET], marker,
+           sizeof(marker));
+    device_info[LEGACY_DEVICE_INFO_TX_VERSION_MAIN_OFFSET] =
+        g_legacy_image_rx.version_main;
+    device_info[LEGACY_DEVICE_INFO_TX_VERSION_SUB_OFFSET] =
+        g_legacy_image_rx.version_sub;
+    device_info[LEGACY_DEVICE_INFO_TX_VERSION_TEST_OFFSET] =
+        g_legacy_image_rx.version_test;
+    device_info[LEGACY_DEVICE_INFO_RX_VERSION_MAIN_OFFSET] = VERSION_MAIN;
+    device_info[LEGACY_DEVICE_INFO_RX_VERSION_SUB_OFFSET] = VERSION_SUB;
+    device_info[LEGACY_DEVICE_INFO_RX_VERSION_TEST_OFFSET] = VERSION_TEST;
+
+    /* BEGIN中的SN与当前图片严格绑定；匹配时使用已提取的广播缓存。 */
+    if (m_last_capsule_sn_valid &&
+        (memcmp(m_last_capsule_sn, capsule_sn,
+                LEGACY_CAPSULE_SN_SIZE) == 0))
+    {
+        capsule_sn = m_last_capsule_sn;
+    }
+    memcpy(&device_info[LEGACY_DEVICE_INFO_CAPSULE_SN_OFFSET], capsule_sn,
+           LEGACY_CAPSULE_SN_SIZE);
+    memcpy(&device_info[LEGACY_DEVICE_INFO_RX_DEVICE_ID_OFFSET],
+           rx_device_id, LEGACY_DEVICE_INFO_RX_DEVICE_ID_SIZE);
+
+    for (antenna = 0u; antenna < 6u; ++antenna)
+    {
+        device_info[LEGACY_DEVICE_INFO_ANT_RSSI_1_6_OFFSET + antenna] =
+            m_latest_antenna_rssi[antenna];
+        device_info[LEGACY_DEVICE_INFO_ANT_RSSI_7_12_OFFSET + antenna] =
+            m_latest_antenna_rssi[antenna + 6u];
+    }
+    device_info[LEGACY_DEVICE_INFO_ACTIVE_ANTENNA_OFFSET] =
+        (uint8_t)(rf1662_get_antenna() + 1u);
+    device_info[LEGACY_DEVICE_INFO_RADIO_FREQUENCY_OFFSET] =
+        (uint8_t)RADIO_FREQUENCY_OFFSET;
+
+    device_info[LEGACY_DEVICE_INFO_ACCEL_VALID_OFFSET] =
+        g_legacy_image_rx.accel_valid ? 1u : 0u;
+    LegacyProtocol_PutI16Be(
+        &device_info[LEGACY_DEVICE_INFO_ACCEL_X_OFFSET],
+        g_legacy_image_rx.accel_x_raw);
+    LegacyProtocol_PutI16Be(
+        &device_info[LEGACY_DEVICE_INFO_ACCEL_Y_OFFSET],
+        g_legacy_image_rx.accel_y_raw);
+    LegacyProtocol_PutI16Be(
+        &device_info[LEGACY_DEVICE_INFO_ACCEL_Z_OFFSET],
+        g_legacy_image_rx.accel_z_raw);
+
+#if RX_DEVICE_INFO_LOG_ENABLED
+    NRF_LOG_INFO("[DEVICE_INFO RX] frame=%u bytes=128 (STM fields still zero)",
+                 (unsigned)g_legacy_image_rx.image_id);
+    NRF_LOG_HEXDUMP_INFO(device_info, LEGACY_DEVICE_INFO_SIZE);
+#endif
 }
 
 /** @brief 比较两路扫描结果；成功率优先，其次比较平均 RSSI。 */
@@ -219,6 +396,10 @@ static bool receiver_antenna_result_is_better(uint32_t ok,
     return average_rssi < best_average_rssi;
 }
 
+/**
+ * @brief 上电扫描12路天线并固定选择有效包平均RSSI最强的一路。
+ * @note 每路扫描RF1662_SCAN_DWELL_MS；RSSI相同时比较CRC成功率。
+ */
 uint8_t receiver_scan_best_antenna(void)
 {
     uint8_t antenna;
@@ -306,6 +487,297 @@ uint8_t receiver_scan_best_antenna(void)
     return best_antenna;
 }
 
+/** @brief 在主循环中安全切换天线，并恢复Radio连续接收。 */
+static void receiver_antenna_switch(uint8_t antenna)
+{
+    NVIC_DisableIRQ(RADIO_IRQn);
+    receiver_radio_disable();
+    (void)rf1662_select_antenna(antenna);
+    NRF_RADIO->EVENTS_END = 0u;
+    NRF_RADIO->EVENTS_CRCOK = 0u;
+    NRF_RADIO->EVENTS_CRCERROR = 0u;
+    NRF_RADIO->SHORTS = receiver_radio_rx_shorts();
+    receiver_radio_arm();
+    NVIC_ClearPendingIRQ(RADIO_IRQn);
+    NVIC_EnableIRQ(RADIO_IRQn);
+}
+
+static void receiver_antenna_start_discovery(void)
+{
+    m_antenna_scan_active = false;
+    m_antenna_mode = ANTENNA_MODE_DISCOVERY;
+    m_scan_antenna = RF1662_DEFAULT_ANTENNA;
+    m_discovery_holding = false;
+    memset(&g_legacy_image_rx, 0, sizeof(g_legacy_image_rx));
+    receiver_antenna_switch(m_scan_antenna);
+    m_antenna_deadline_ms = m_antenna_time_ms + RF1662_DISCOVERY_DWELL_MS;
+    NRF_LOG_INFO("RF1662 mode=DISCOVERY ANT%u", (unsigned)(m_scan_antenna + 1u));
+}
+
+static void receiver_antenna_start_target_scan(void)
+{
+    m_antenna_mode = ANTENNA_MODE_TARGET_SCAN;
+    m_antenna_scan_active = true;
+    m_scan_antenna = 0u;
+    m_scan_round = 0u;
+    memset(m_scan_packet_count, 0, sizeof(m_scan_packet_count));
+    memset(m_scan_rssi_sum, 0, sizeof(m_scan_rssi_sum));
+    memset(m_candidate_antenna, 0, sizeof(m_candidate_antenna));
+    m_candidate_count = 0u;
+    m_candidate_index = 0u;
+    m_antenna_scan_total = 0u;
+    m_antenna_scan_crc_ok = 0u;
+    m_antenna_scan_rssi_sum = 0u;
+    memset(&m_receiver_queue, 0, sizeof(m_receiver_queue));
+    memset(&g_legacy_image_rx, 0, sizeof(g_legacy_image_rx));
+    receiver_antenna_switch(m_scan_antenna);
+    m_antenna_deadline_ms = m_antenna_time_ms + RF1662_TARGET_SCAN_DWELL_MS;
+    NRF_LOG_INFO("RF1662 mode=TARGET_SCAN dwell=%ums rounds=%u",
+                 (unsigned)RF1662_TARGET_SCAN_DWELL_MS,
+                 (unsigned)RF1662_TARGET_SCAN_ROUNDS);
+}
+
+/** @brief RTC2提供50ms状态机节拍，不在中断中切换射频通路。 */
+void RTC2_IRQHandler(void)
+{
+    if (NRF_RTC2->EVENTS_COMPARE[0] != 0u)
+    {
+        NRF_RTC2->EVENTS_COMPARE[0] = 0u;
+        NRF_RTC2->CC[0] = (NRF_RTC2->COUNTER +
+                           ((1024u * RF1662_SERVICE_TICK_MS) / 1000u)) &
+                          0x00FFFFFFu;
+        m_antenna_time_ms += RF1662_SERVICE_TICK_MS;
+        m_antenna_service_due = true;
+    }
+}
+
+void receiver_antenna_manager_init(void)
+{
+    NRF_CLOCK->LFCLKSRC = CLOCK_LFCLKSRC_SRC_RC;
+    NRF_CLOCK->EVENTS_LFCLKSTARTED = 0u;
+    NRF_CLOCK->TASKS_LFCLKSTART = 1u;
+    while (NRF_CLOCK->EVENTS_LFCLKSTARTED == 0u) {}
+
+    NRF_RTC2->TASKS_STOP = 1u;
+    NRF_RTC2->TASKS_CLEAR = 1u;
+    NRF_RTC2->PRESCALER = 31u; /* 32768/(31+1)=1024 Hz */
+    NRF_RTC2->CC[0] = (1024u * RF1662_SERVICE_TICK_MS) / 1000u;
+    NRF_RTC2->EVENTS_COMPARE[0] = 0u;
+    NRF_RTC2->INTENSET = RTC_INTENSET_COMPARE0_Msk;
+    NVIC_ClearPendingIRQ(RTC2_IRQn);
+    NVIC_SetPriority(RTC2_IRQn, 7u);
+    NVIC_EnableIRQ(RTC2_IRQn);
+    NRF_RTC2->TASKS_START = 1u;
+    receiver_antenna_start_discovery();
+}
+
+void receiver_antenna_binding_changed(void)
+{
+    /* 新绑定不能沿用上一设备或发现阶段留下的天线质量。 */
+    memset((void *)m_latest_antenna_rssi, 0,
+           sizeof(m_latest_antenna_rssi));
+    if (receiver_binding_is_bound())
+    {
+        receiver_antenna_start_target_scan();
+    }
+    else
+    {
+        memset(m_last_capsule_sn, 0, sizeof(m_last_capsule_sn));
+        m_last_capsule_sn_valid = false;
+        receiver_antenna_start_discovery();
+    }
+}
+
+void receiver_antenna_note_complete_image(void)
+{
+    if ((m_antenna_mode == ANTENNA_MODE_LOCKED) &&
+        receiver_binding_is_bound())
+    {
+        m_last_complete_image_ms = m_antenna_time_ms;
+        m_last_target_packet_ms = m_antenna_time_ms;
+        m_failed_frame_count = 0u;
+    }
+}
+
+void receiver_antenna_note_discovery_sn(void)
+{
+    if ((m_antenna_mode == ANTENNA_MODE_DISCOVERY) &&
+        !m_discovery_holding)
+    {
+        m_discovery_holding = true;
+        m_antenna_deadline_ms = m_antenna_time_ms +
+                                RF1662_DISCOVERY_FOUND_HOLD_MS;
+        NRF_LOG_INFO("RF1662 discovery hold ANT%u for %ums",
+                     (unsigned)(m_scan_antenna + 1u),
+                     (unsigned)RF1662_DISCOVERY_FOUND_HOLD_MS);
+    }
+}
+
+/** @brief 根据多轮目标包数量和平均RSSI生成前三名候选天线。 */
+static void receiver_antenna_build_candidates(void)
+{
+    uint8_t antenna;
+    uint8_t position;
+
+    m_candidate_count = 0u;
+    for (antenna = 0u; antenna < RF1662_ANTENNA_COUNT; ++antenna)
+    {
+        if (m_scan_packet_count[antenna] == 0u)
+        {
+            continue;
+        }
+        for (position = 0u; position < m_candidate_count; ++position)
+        {
+            uint8_t old = m_candidate_antenna[position];
+            uint32_t new_avg = m_scan_rssi_sum[antenna] /
+                               m_scan_packet_count[antenna];
+            uint32_t old_avg = m_scan_rssi_sum[old] /
+                               m_scan_packet_count[old];
+            if ((m_scan_packet_count[antenna] > m_scan_packet_count[old]) ||
+                ((m_scan_packet_count[antenna] == m_scan_packet_count[old]) &&
+                 (new_avg < old_avg)))
+            {
+                break;
+            }
+        }
+        if (position < 3u)
+        {
+            uint8_t move = (m_candidate_count < 3u) ? m_candidate_count : 2u;
+            while (move > position)
+            {
+                m_candidate_antenna[move] = m_candidate_antenna[move - 1u];
+                --move;
+            }
+            m_candidate_antenna[position] = antenna;
+            if (m_candidate_count < 3u)
+            {
+                ++m_candidate_count;
+            }
+        }
+    }
+}
+
+/** @brief 锁定指定候选，并重新开始链路健康计时。 */
+static void receiver_antenna_lock_candidate(uint8_t candidate_index)
+{
+    uint8_t antenna = m_candidate_antenna[candidate_index];
+    m_antenna_scan_active = false;
+    m_antenna_mode = ANTENNA_MODE_LOCKED;
+    m_candidate_index = candidate_index;
+    memset(&m_receiver_queue, 0, sizeof(m_receiver_queue));
+    memset(&g_legacy_image_rx, 0, sizeof(g_legacy_image_rx));
+    receiver_antenna_switch(antenna);
+    m_last_target_packet_ms = m_antenna_time_ms;
+    m_last_complete_image_ms = m_antenna_time_ms;
+    m_failed_frame_count = 0u;
+    NRF_LOG_INFO("RF1662 LOCKED candidate=%u/%u ANT%u packets=%u avg_rssi=-%u dBm",
+                 (unsigned)(candidate_index + 1u),
+                 (unsigned)m_candidate_count,
+                 (unsigned)(antenna + 1u),
+                 (unsigned)m_scan_packet_count[antenna],
+                 (unsigned)(m_scan_rssi_sum[antenna] /
+                            m_scan_packet_count[antenna]));
+}
+
+bool receiver_antenna_service(void)
+{
+    uint32_t now;
+    uint32_t packet_count;
+
+    if (!m_antenna_service_due)
+    {
+        return false;
+    }
+    m_antenna_service_due = false;
+    now = m_antenna_time_ms;
+
+    if (m_antenna_mode == ANTENNA_MODE_DISCOVERY)
+    {
+        if (receiver_binding_is_bound())
+        {
+            receiver_antenna_start_target_scan();
+        }
+        else if ((int32_t)(now - m_antenna_deadline_ms) >= 0)
+        {
+            m_discovery_holding = false;
+            m_scan_antenna = (uint8_t)((m_scan_antenna + 1u) % RF1662_ANTENNA_COUNT);
+            receiver_antenna_switch(m_scan_antenna);
+            m_antenna_deadline_ms = now + RF1662_DISCOVERY_DWELL_MS;
+            NRF_LOG_INFO("RF1662 discovery ANT%u", (unsigned)(m_scan_antenna + 1u));
+        }
+        return true;
+    }
+
+    if (!receiver_binding_is_bound())
+    {
+        receiver_antenna_start_discovery();
+        return true;
+    }
+
+    if (m_antenna_mode == ANTENNA_MODE_TARGET_SCAN)
+    {
+        if ((int32_t)(now - m_antenna_deadline_ms) < 0)
+        {
+            return false;
+        }
+        packet_count = m_antenna_scan_crc_ok;
+        m_scan_packet_count[m_scan_antenna] += packet_count;
+        m_scan_rssi_sum[m_scan_antenna] += m_antenna_scan_rssi_sum;
+        m_antenna_scan_total = 0u;
+        m_antenna_scan_crc_ok = 0u;
+        m_antenna_scan_rssi_sum = 0u;
+
+        ++m_scan_antenna;
+        if (m_scan_antenna >= RF1662_ANTENNA_COUNT)
+        {
+            m_scan_antenna = 0u;
+            ++m_scan_round;
+        }
+
+        if (m_scan_round < RF1662_TARGET_SCAN_ROUNDS)
+        {
+            receiver_antenna_switch(m_scan_antenna);
+            m_antenna_deadline_ms = now + RF1662_TARGET_SCAN_DWELL_MS;
+        }
+        else
+        {
+            receiver_antenna_build_candidates();
+            if (m_candidate_count != 0u)
+            {
+                receiver_antenna_lock_candidate(0u);
+            }
+            else
+            {
+                NRF_LOG_WARNING("RF1662 target not found; restarting fast scan");
+                receiver_antenna_start_target_scan();
+            }
+        }
+        return true;
+    }
+
+    if ((m_antenna_mode == ANTENNA_MODE_LOCKED) &&
+        (((uint32_t)(now - m_last_target_packet_ms) >=
+          RF1662_TARGET_PACKET_TIMEOUT_MS) ||
+         ((uint32_t)(now - m_last_complete_image_ms) >=
+          RF1662_COMPLETE_IMAGE_TIMEOUT_MS) ||
+         (m_failed_frame_count >= RF1662_FAILED_FRAME_LIMIT)))
+    {
+        g_legacy_image_rx.active = false;
+        if ((uint8_t)(m_candidate_index + 1u) < m_candidate_count)
+        {
+            NRF_LOG_WARNING("RF1662 link weak; trying next candidate");
+            receiver_antenna_lock_candidate((uint8_t)(m_candidate_index + 1u));
+        }
+        else
+        {
+            NRF_LOG_WARNING("RF1662 candidates exhausted; restarting fast scan");
+            receiver_antenna_start_target_scan();
+        }
+        return true;
+    }
+    return false;
+}
+
 /** @brief 从环形队列取出一包并交给协议解析器。 */
 bool receiver_forward_one(void)
 {
@@ -350,11 +822,8 @@ void receiver_send_image_ack(uint8_t image_id)
     memcpy(&response[2], g_legacy_image_rx.capsule_sn,
            LEGACY_CAPSULE_SN_SIZE);
 
-    NRF_LOG_INFO("[ACK] start: frame=%u", (unsigned)image_id);  // ① 入口：函数被调用
-
     /* 短暂暂停接收，发送 ACK 后立即恢复 RX。 */
     NVIC_DisableIRQ(RADIO_IRQn);
-    NRF_LOG_INFO("[ACK] IRQ disabled");                          // ② Radio 中断已关闭
 
     /* 等待 Radio 进入 Disabled 状态（带超时保护） */
     NRF_RADIO->EVENTS_DISABLED = 0u;
@@ -369,11 +838,7 @@ void receiver_send_image_ack(uint8_t image_id)
             break;
         }
     }
-    NRF_LOG_INFO("[ACK] radio disabled (wait=%u)",                // ③ Radio 已禁用
-                 (unsigned)wait_count);
-
     nrf_gpio_pin_set(RECEIVER_MODE_PIN);
-    NRF_LOG_INFO("[ACK] mode pin HIGH");                          // ④ 外部 RF 开关切到 TX
 
     NRF_RADIO->PACKETPTR = (uint32_t)response;
     NRF_RADIO->SHORTS = RADIO_SHORTS_READY_START_Msk |
@@ -394,20 +859,21 @@ void receiver_send_image_ack(uint8_t image_id)
                 break;
             }
         }
-        NRF_LOG_INFO("[ACK] TXEN #%u done (wait=%u)",              // ⑤ 每次 TXEN 完成
-                     (unsigned)repeat, (unsigned)wait_count);
     }
 
     nrf_gpio_pin_clear(RECEIVER_MODE_PIN);
-    NRF_LOG_INFO("[ACK] mode pin LOW");                           // ⑥ 外部 RF 开关切回 RX
 
     NRF_RADIO->SHORTS = receiver_radio_rx_shorts();
     receiver_radio_arm();
     NVIC_ClearPendingIRQ(RADIO_IRQn);
     NVIC_EnableIRQ(RADIO_IRQn);
-    NRF_LOG_INFO("[ACK] done: frame=%u", (unsigned)image_id);    // ⑦ 出口：ACK 流程完整结束
+    NRF_LOG_INFO("[ACK] frame=%u sent x2", (unsigned)image_id);
 }
 
+/**
+ * @brief 暂停接收并把短控制请求通过Radio重复发送给TX，随后恢复接收。
+ * @note 由UART控制路由调用，不用于图片ACK。
+ */
 void receiver_send_control_packet(const uint8_t *packet, uint16_t length,
                                   uint8_t repeat_count)
 {
@@ -449,6 +915,7 @@ bool receiver_forward_complete_image(void)
 
     if (g_stm_frame_length != 0u)
     {
+        ++m_uart_busy_drop_count;
         NRF_LOG_WARNING("STM UART busy; image %u not queued",
                         g_legacy_image_rx.image_id);
         return false;
@@ -461,23 +928,77 @@ bool receiver_forward_complete_image(void)
     g_stm_frame[3] = 0x34u;
     g_stm_frame[4] = LEGACY_CMD_IMAGE_FORWARD;
     LegacyProtocol_PutU16Be(&g_stm_frame[5], payload_length);
-    memcpy(&g_stm_frame[LEGACY_STM_FRAME_HEADER_SIZE + 11u],
-           g_legacy_image_rx.capsule_sn, LEGACY_CAPSULE_SN_SIZE);
+    receiver_build_device_info(
+        &g_stm_frame[LEGACY_STM_FRAME_HEADER_SIZE]);
     memcpy(&g_stm_frame[LEGACY_STM_FRAME_HEADER_SIZE +
                         LEGACY_DEVICE_INFO_SIZE],
            g_legacy_image_rx.image, g_legacy_image_rx.image_length);
+    /* RX->STM校验覆盖设备信息和JPEG，防止SN/版本/RSSI静默损坏。 */
     for (checksum_index = 0u;
-         checksum_index < g_legacy_image_rx.image_length;
+         checksum_index < payload_length;
          checksum_index++)
     {
-        checksum = (uint8_t)(checksum + g_legacy_image_rx.image[checksum_index]);
+        checksum = (uint8_t)(checksum +
+            g_stm_frame[LEGACY_STM_FRAME_HEADER_SIZE + checksum_index]);
     }
     g_stm_frame[frame_length - 1u] = checksum;
     g_stm_frame_offset = 0u;
     g_stm_frame_length = frame_length;
     g_stm_image_length = g_legacy_image_rx.image_length;
     g_stm_image_id = g_legacy_image_rx.image_id;
+    m_stm_frame_begin_ticks = m_rx_frame_begin_ticks;
+    m_stm_queue_start_ticks = NRF_RTC2->COUNTER;
+    m_stm_radio_duration_ms = m_rx_radio_duration_ms;
     return true;
+}
+
+/** @brief 图片最后一个UART字节实际发完后计算最终有效帧率。 */
+void receiver_note_stm_forwarded(uint8_t image_id, uint16_t image_length)
+{
+    uint32_t now_ticks = NRF_RTC2->COUNTER;
+    uint32_t uart_ms = receiver_perf_elapsed_ms(m_stm_queue_start_ticks,
+                                                now_ticks);
+    uint32_t total_ms = receiver_perf_elapsed_ms(m_stm_frame_begin_ticks,
+                                                 now_ticks);
+
+    ++m_forwarded_frame_count;
+#if RX_FRAME_RATE_LOG_ENABLED
+    if (m_have_last_stm_forward)
+    {
+        uint32_t interval_ms = receiver_perf_elapsed_ms(
+            m_last_stm_forward_ticks, now_ticks);
+        uint32_t fps_x100 = (interval_ms != 0u) ?
+                            (100000u / interval_ms) : 0u;
+        NRF_LOG_INFO("[FPS] STM frame=%u interval=%ums rate=%u.%02u fps",
+                     (unsigned)image_id, (unsigned)interval_ms,
+                     (unsigned)(fps_x100 / 100u),
+                     (unsigned)(fps_x100 % 100u));
+    }
+    else
+    {
+        NRF_LOG_INFO("[FPS] STM frame=%u first complete frame",
+                     (unsigned)image_id);
+    }
+    NRF_LOG_INFO("[PERF] frame=%u radio=%ums uart=%ums total=%ums",
+                 (unsigned)image_id, (unsigned)m_stm_radio_duration_ms,
+                 (unsigned)uart_ms, (unsigned)total_ms);
+    NRF_LOG_INFO("[PERF] bytes=%u complete=%u forwarded=%u busy_drop=%u",
+                 (unsigned)image_length, (unsigned)m_complete_frame_count,
+                 (unsigned)m_forwarded_frame_count,
+                 (unsigned)m_uart_busy_drop_count);
+    if ((m_forwarded_frame_count % 10u) == 0u)
+    {
+        NRF_LOG_INFO("[PERF] loss: incomplete=%u checksum=%u replaced=%u",
+                     (unsigned)m_incomplete_end_count,
+                     (unsigned)m_checksum_failure_count,
+                     (unsigned)m_replaced_frame_count);
+    }
+#else
+    (void)image_id;
+    (void)image_length;
+#endif
+    m_last_stm_forward_ticks = now_ticks;
+    m_have_last_stm_forward = true;
 }
 
 /** @brief 解析一个原始 TYGD31 Radio 包并推进图片重组状态机。 */
@@ -493,14 +1014,14 @@ void receiver_process_legacy_packet(const uint8_t *packet)
         (packet[0] == LEGACY_CMD_IMAGE_DATA) ||
         (packet[0] == LEGACY_CMD_IMAGE_END))
     {
-//        if (!receiver_binding_matches(&packet[2]))
-//        {
-//            if (packet[0] == LEGACY_CMD_IMAGE_BEGIN)
-//            {
-//                NRF_LOG_INFO("Image ignored: RX unbound or SN mismatch");
-//            }
-//            return;
-//        }
+        if (!receiver_binding_matches(&packet[2]))
+        {
+            if (packet[0] == LEGACY_CMD_IMAGE_BEGIN)
+            {
+                NRF_LOG_INFO("Image ignored: RX unbound or SN mismatch");
+            }
+            return;
+        }
     }
 
     if (packet[0] == LEGACY_CMD_IMAGE_BEGIN)
@@ -520,6 +1041,15 @@ void receiver_process_legacy_packet(const uint8_t *packet)
                             (unsigned)image_length, (unsigned)packet_count);
             return;
         }
+        if (g_legacy_image_rx.active &&
+            (packet[1] != g_legacy_image_rx.image_id))
+        {
+            if (m_failed_frame_count < 0xFFu)
+            {
+                ++m_failed_frame_count;
+            }
+            ++m_replaced_frame_count;
+        }
         memset(&g_legacy_image_rx, 0, sizeof(g_legacy_image_rx));
         g_legacy_image_rx.active = true;
         g_legacy_image_rx.image_id = packet[1];
@@ -527,12 +1057,26 @@ void receiver_process_legacy_packet(const uint8_t *packet)
                LEGACY_CAPSULE_SN_SIZE);
         g_legacy_image_rx.image_length = image_length;
         g_legacy_image_rx.packet_count = packet_count;
+        m_rx_frame_begin_ticks = NRF_RTC2->COUNTER;
         g_legacy_image_rx.version_main = packet[14];              // 胶囊固件主版本号
         g_legacy_image_rx.version_sub  = packet[15];              // 胶囊固件子版本号
         g_legacy_image_rx.version_test = packet[16];              // 胶囊固件测试版本号
+        g_legacy_image_rx.accel_valid =
+            (packet[LEGACY_BEGIN_ACCEL_VALID_OFFSET] == 1u);
+        g_legacy_image_rx.accel_x_raw =
+            LegacyProtocol_GetI16Be(&packet[LEGACY_BEGIN_ACCEL_X_OFFSET]);
+        g_legacy_image_rx.accel_y_raw =
+            LegacyProtocol_GetI16Be(&packet[LEGACY_BEGIN_ACCEL_Y_OFFSET]);
+        g_legacy_image_rx.accel_z_raw =
+            LegacyProtocol_GetI16Be(&packet[LEGACY_BEGIN_ACCEL_Z_OFFSET]);
         NRF_LOG_INFO("Legacy image begin: id=%u length=%u packets=%u ver=%u.%u.%u",
                      packet[1], (unsigned)image_length, (unsigned)packet_count,
                      (unsigned)packet[14], (unsigned)packet[15], (unsigned)packet[16]);
+        NRF_LOG_INFO("ADXL362 raw: valid=%u X=%d Y=%d Z=%d",
+                     g_legacy_image_rx.accel_valid ? 1u : 0u,
+                     (int)g_legacy_image_rx.accel_x_raw,
+                     (int)g_legacy_image_rx.accel_y_raw,
+                     (int)g_legacy_image_rx.accel_z_raw);
         return;
     }
     if (!g_legacy_image_rx.active ||
@@ -566,6 +1110,7 @@ void receiver_process_legacy_packet(const uint8_t *packet)
     {
         if (g_legacy_image_rx.received_count != g_legacy_image_rx.packet_count)
         {
+            ++m_incomplete_end_count;
             NRF_LOG_WARNING("Legacy image incomplete: id=%u received=%u/%u",
                             packet[1], (unsigned)g_legacy_image_rx.received_count,
                             (unsigned)g_legacy_image_rx.packet_count);
@@ -577,13 +1122,22 @@ void receiver_process_legacy_packet(const uint8_t *packet)
         }
         if (checksum != packet[10])
         {
+            ++m_checksum_failure_count;
             NRF_LOG_WARNING("Legacy image checksum failed: id=%u", packet[1]);
+            if (m_failed_frame_count < 0xFFu)
+            {
+                ++m_failed_frame_count;
+            }
             g_legacy_image_rx.active = false;
             return;
         }
+        ++m_complete_frame_count;
+        m_rx_radio_duration_ms = receiver_perf_elapsed_ms(
+            m_rx_frame_begin_ticks, NRF_RTC2->COUNTER);
         NRF_LOG_INFO("[ACK] END received: frame=%u checksum OK, sending ACK...",
                      (unsigned)packet[1]);
         receiver_send_image_ack(packet[1]);
+        receiver_antenna_note_complete_image();
         if (receiver_forward_complete_image())
         {
             NRF_LOG_INFO("Legacy image queued for STM: id=%u bytes=%u",

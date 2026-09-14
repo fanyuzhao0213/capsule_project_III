@@ -65,11 +65,16 @@ static uint32_t m_uart_rx_packet_length;
 
 /** 主循环当前 STM 数据包超出最大长度的丢弃计数。 */
 static uint32_t m_uart_rx_packet_overflow;
+
+/** 图片全部加入UART FIFO后，等待APP_UART_TX_EMPTY确认最后一字节已发出。 */
+static volatile bool m_stm_image_waiting_tx_empty;
+static volatile bool m_stm_image_tx_complete_due;
 static bool m_control_response_seen;
 static uint8_t m_expected_control_response;
 static uint8_t m_pending_control_frame[LEGACY_CONTROL_FRAME_MAX_SIZE];
 static uint16_t m_pending_control_length;
 
+/** @brief 计算ZAYS控制帧数据区的8位累加校验和。 */
 static uint8_t control_checksum(const uint8_t *data, uint32_t length)
 {
     uint8_t sum = 0u;
@@ -81,6 +86,7 @@ static uint8_t control_checksum(const uint8_t *data, uint32_t length)
     return sum;
 }
 
+/** @brief 组装ZAYS应答帧并通过UART发给STM32，最终由STM32透传PC。 */
 static bool control_send_uart_frame(uint8_t command, const uint8_t *payload,
                                     uint16_t payload_length)
 {
@@ -105,6 +111,10 @@ static bool control_send_uart_frame(uint8_t command, const uint8_t *payload,
     return receiver_uart_write(frame, frame_length);
 }
 
+/**
+ * @brief 处理STM32发来的完整控制包。
+ * @note 0x20～0x25在RX本地处理；0x40～0x47通过Radio转发给TX。
+ */
 static void control_handle_uart_packet(const uint8_t *frame, uint32_t length)
 {
     uint32_t offset = 0u;
@@ -157,6 +167,7 @@ static void control_handle_uart_packet(const uint8_t *frame, uint32_t length)
                              LEGACY_CONTROL_RESULT_OK :
                              LEGACY_CONTROL_RESULT_ERROR;
             CONTROL_LOG_INFO("[BIND] unbind result=%u", (unsigned)result);
+            receiver_antenna_binding_changed();
             (void)control_send_uart_frame(LEGACY_CMD_SN_UNBIND_RESPONSE,
                                           &result, 1u);
             offset += frame_length;
@@ -169,6 +180,7 @@ static void control_handle_uart_packet(const uint8_t *frame, uint32_t length)
                              LEGACY_CONTROL_RESULT_OK :
                              LEGACY_CONTROL_RESULT_ERROR;
             CONTROL_LOG_INFO("[BIND] bind result=%u", (unsigned)result);
+            receiver_antenna_binding_changed();
             NRF_LOG_HEXDUMP_INFO(&current[7], LEGACY_CAPSULE_SN_SIZE);
             (void)control_send_uart_frame(LEGACY_CMD_SN_BIND_RESPONSE,
                                           &result, 1u);
@@ -322,9 +334,16 @@ static void receiver_uart_event_handler(app_uart_evt_t *p_event)
                             (unsigned)p_event->data.error_code,
                             (unsigned)g_uart_rx_dropped);
     }
+    else if (p_event->evt_type == APP_UART_TX_EMPTY)
+    {
+        if (m_stm_image_waiting_tx_empty)
+        {
+            m_stm_image_tx_complete_due = true;
+        }
+    }
     else
     {
-        /* APP_UART_TX_EMPTY 等事件不需要额外处理。 */
+        /* 其余事件不需要处理。 */
     }
 }
 
@@ -442,6 +461,10 @@ bool receiver_uart_process_received(void)
     return did_work;
 }
 
+/**
+ * @brief 处理Radio收到的SN广播或TX控制应答，并按绑定SN过滤广播。
+ * @return true表示该包已作为控制业务处理，false表示应交给图片解析器。
+ */
 bool receiver_control_handle_radio_packet(const uint8_t *packet)
 {
     uint16_t payload_length;
@@ -452,11 +475,19 @@ bool receiver_control_handle_radio_packet(const uint8_t *packet)
     }
     if ((packet[0] == LEGACY_CMD_CAPSULE_SN_BROADCAST))
     {
+        if (!receiver_binding_is_bound())
+        {
+            CONTROL_LOG_INFO("[DISCOVERY] SN received (8 bytes):");
+            NRF_LOG_HEXDUMP_INFO(&packet[1], LEGACY_CAPSULE_SN_SIZE);
+            receiver_antenna_note_discovery_sn();
+        }
         if (receiver_binding_is_bound() &&
             !receiver_binding_matches(&packet[1]))
         {
             return true;
         }
+        /* 先提取8字节有效SN；即使图片UART正忙，也不能丢失设备信息。 */
+        receiver_device_info_update_capsule_sn(&packet[1]);
         if (g_stm_frame_length != 0u)
         {
             CONTROL_LOG_INFO("[CTRL] SN broadcast dropped: image UART busy");
@@ -517,6 +548,7 @@ bool receiver_control_handle_radio_packet(const uint8_t *packet)
     return true;
 }
 
+/** @brief 在图片UART发送空闲后补发排队的短控制应答。 */
 bool receiver_control_service(void)
 {
     if ((m_pending_control_length == 0u) || (g_stm_frame_length != 0u))
@@ -559,48 +591,62 @@ bool receiver_uart_write(const uint8_t *data, uint32_t length)
     return true;
 }
 
-/** @brief 分批把待发送 STM 帧填入 SDK UART FIFO。 */
+/** @brief 用EasyDMA分块发送STM帧；每块完成后由TX_EMPTY启动下一块。 */
 bool receiver_uart_tx_service(void)
 {
-    uint32_t budget = UART_TX_SERVICE_BUDGET;
-    bool did_work = false;
+    uint32_t remaining;
+    uint16_t chunk_length;
+    uint32_t result;
 
-    while ((g_stm_frame_length != 0u) &&
-           (g_stm_frame_offset < g_stm_frame_length) &&
-           (budget != 0u))
+    if (m_stm_image_tx_complete_due)
     {
-        uint32_t result = app_uart_put(g_stm_frame[g_stm_frame_offset]);
-
-        if (result == NRF_SUCCESS)
+        m_stm_image_tx_complete_due = false;
+        m_stm_image_waiting_tx_empty = false;
+        if ((g_stm_frame_length != 0u) &&
+            (g_stm_frame_offset == g_stm_frame_length))
         {
-            ++g_stm_frame_offset;
-            --budget;
-            did_work = true;
-        }
-        else if (result == NRF_ERROR_NO_MEM)
-        {
-            break;
-        }
-        else
-        {
-            NRF_LOG_ERROR("STM UART TX failed: offset=%u/%u error=%u",
-                          (unsigned)g_stm_frame_offset,
-                          (unsigned)g_stm_frame_length,
-                          (unsigned)result);
+            receiver_note_stm_forwarded(g_stm_image_id, g_stm_image_length);
             g_stm_frame_length = 0u;
             g_stm_frame_offset = 0u;
             return true;
         }
     }
 
-    if ((g_stm_frame_length != 0u) &&
-        (g_stm_frame_offset == g_stm_frame_length))
+    if (m_stm_image_waiting_tx_empty || (g_stm_frame_length == 0u))
     {
-        NRF_LOG_INFO("Legacy image forwarded to STM: id=%u bytes=%u",
-                     g_stm_image_id, (unsigned)g_stm_image_length);
-        g_stm_frame_length = 0u;
-        g_stm_frame_offset = 0u;
-        did_work = true;
+        return false;
     }
-    return did_work;
+
+    remaining = g_stm_frame_length - g_stm_frame_offset;
+    chunk_length = (remaining > UART_TX_DMA_CHUNK_SIZE) ?
+                   (uint16_t)UART_TX_DMA_CHUNK_SIZE : (uint16_t)remaining;
+
+    /* 对很短的末块也消除“DMA已结束但waiting尚未置位”的中断竞态。 */
+    __disable_irq();
+    result = app_uart_tx_buffer(&g_stm_frame[g_stm_frame_offset],
+                                chunk_length);
+    if (result == NRF_SUCCESS)
+    {
+        g_stm_frame_offset += chunk_length;
+        m_stm_image_waiting_tx_empty = true;
+    }
+    __enable_irq();
+
+    if (result == NRF_SUCCESS)
+    {
+        return true;
+    }
+    if ((result == NRF_ERROR_BUSY) || (result == NRF_ERROR_NO_MEM))
+    {
+        return false;
+    }
+
+    NRF_LOG_ERROR("STM UART DMA failed: offset=%u/%u chunk=%u error=%u",
+                  (unsigned)g_stm_frame_offset,
+                  (unsigned)g_stm_frame_length,
+                  (unsigned)chunk_length,
+                  (unsigned)result);
+    g_stm_frame_length = 0u;
+    g_stm_frame_offset = 0u;
+    return true;
 }

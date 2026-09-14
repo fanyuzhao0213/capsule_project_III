@@ -10,13 +10,16 @@
 #include "nrf_delay.h"
 #include "nrf_gpio.h"
 #include "nrf_log.h"
-#if !TX_INIT_LOG_ENABLED
+#if !(TX_LOG_ENABLED && TX_INIT_LOG_ENABLED)
 #undef NRF_LOG_INFO
 #undef NRF_LOG_WARNING
 #undef NRF_LOG_ERROR
 #define NRF_LOG_INFO(...)
 #define NRF_LOG_WARNING(...)
 #define NRF_LOG_ERROR(...)
+#define TX_INIT_LOG_FLUSH() ((void)0)
+#else
+#define TX_INIT_LOG_FLUSH() NRF_LOG_FLUSH()
 #endif
 #include "nrf_log_ctrl.h"
 #include "spi_bus.h"
@@ -59,9 +62,10 @@
 #define CX_REG_PART_REV     0xFFu
 
 #define CX_OV7676_ADDRESS   0x78u
-/* 已验证的低压缩率/高画质配置：亮度表0、色度表1。 */
+/* 折中压缩档：亮度保留低压缩表0，色度使用高压缩表3。
+ * 优先保留人眼更敏感的轮廓/纹理细节，同时减少色度数据和Radio占空时间。 */
 #define CX_JPEG_DCT_LUMA    0x00u
-#define CX_JPEG_DCT_CHROMA  0x01u
+#define CX_JPEG_DCT_CHROMA  0x03u
 /* SPI读取命令占3字节，所以一次最多读取255-3=252字节数据。 */
 #define CX_SPI_DATA_MAX     (SPI_BUS_MAX_TRANSFER - 3u)
 
@@ -132,7 +136,7 @@ static bool cx_verify_camera_config(void)
                  v_delay, v_height);
     NRF_LOG_INFO("CX93510 readback: DCT=%02x/%02x DIFF_JPEG=%02x ENC_CTL1=%02x",
                  dct_luma, dct_chroma, diff_jpeg, enc_ctl1);
-    NRF_LOG_FLUSH();
+    TX_INIT_LOG_FLUSH();
 
     if ((si_cfg_1 != 0x24u) || (si_cfg_3 != 0x01u) ||
         (h_active != 0x00u) || (h_delay != 0x00u) ||
@@ -272,7 +276,7 @@ bool cx93510_init(uint8_t *revision)
     NRF_LOG_INFO("CX93510 PD_RAM enabled on P0.%02u", (unsigned)CX_PD_RAM_PIN);
     nrf_delay_ms(5u);
     NRF_LOG_INFO("CX93510 detect stage: sending SPI auto-detect transaction");
-    NRF_LOG_FLUSH();
+    TX_INIT_LOG_FLUSH();
 
     /* Auto-detection discards the first SPI transaction after power-up. */
     (void)cx_read(CX_REG_PART_REV, &id);
@@ -288,7 +292,7 @@ bool cx93510_init(uint8_t *revision)
     }
     NRF_LOG_INFO("CX93510 SPI detected: PN_BO_REV=0x%02x SLAVE_SEL=0x%02x",
                  id, interface_type);
-    NRF_LOG_FLUSH();
+    TX_INIT_LOG_FLUSH();
 
     if (revision != NULL)
     {
@@ -312,7 +316,7 @@ bool cx93510_init(uint8_t *revision)
         !cx_write(CX_REG_H_CAP_WIDTH, 0x3Cu) ||
         !cx_write(CX_REG_V_CAP_DELAY, 0x00u) ||
         !cx_write(CX_REG_V_CAP_HEIGHT, 0x3Cu) ||
-        /* 已验证的低压缩率/高画质配置：亮度表0、色度表1。 */
+        /* 折中档：亮度表0保留细节，色度表3减少图像数据量。 */
         !cx_write(CX_REG_DCT_LUMA, CX_JPEG_DCT_LUMA) ||
         !cx_write(CX_REG_DCT_CHROMA, CX_JPEG_DCT_CHROMA) ||
         !cx_write(CX_REG_DIFF_JPEG, 0x00u))
@@ -328,7 +332,7 @@ bool cx93510_init(uint8_t *revision)
         NRF_LOG_ERROR("CX93510 JPEG reload/readback setup failed");
         return false;
     }
-    NRF_LOG_INFO("CX93510 configured: 480x480 YUY2, direct JPEG, high quality");
+    NRF_LOG_INFO("CX93510 configured: 480x480 YUY2, direct JPEG, DCT=00/03");
     return true;
 }
 
@@ -559,7 +563,7 @@ bool cx93510_capture_one(cx93510_frame_info_t *frame, uint32_t timeout_ms)
 {
     uint8_t status;
     NRF_LOG_INFO("CX93510 capture stage: reset compressor/frame buffer");
-    NRF_LOG_FLUSH();
+    TX_INIT_LOG_FLUSH();
     if ((frame == NULL) || !compressor_reset() ||
         !cx_write(CX_REG_SI_CFG_3, 0x01u) ||
         !cx_write(CX_REG_SI_CFG_2, 0x80u))
@@ -568,7 +572,7 @@ bool cx93510_capture_one(cx93510_frame_info_t *frame, uint32_t timeout_ms)
         return false;
     }
     NRF_LOG_INFO("CX93510 capture stage: waiting for one frame");
-    NRF_LOG_FLUSH();
+    TX_INIT_LOG_FLUSH();
 
     while (timeout_ms-- != 0u)
     {
@@ -622,7 +626,7 @@ bool cx93510_capture_one(cx93510_frame_info_t *frame, uint32_t timeout_ms)
         NRF_LOG_ERROR("OV7676 state: MODE=0x%02x SYNC_OEN=0x%02x DATA_OEN=0x%02x FMT=0x%02x FRAME=%u",
                       sensor_mode, sensor_sync_oen, sensor_data_oen,
                       sensor_format, (unsigned)sensor_frame_count);
-        NRF_LOG_FLUSH();
+        TX_INIT_LOG_FLUSH();
     }
     return false;
 }

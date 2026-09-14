@@ -9,12 +9,15 @@
 #include "image.h"
 #include "capsule_sn_storage.h"
 #include "config.h"
+#include "dev_adxl362.h"
+#include "ov7676.h"
+#include "tx_runtime_log.h"
 #include "nrf.h"
 #include "nrf_gpio.h"
 #include "nrf_log.h"
 #include <string.h>
 
-#if !TX_CONFIG_LOG_ENABLED
+#if !(TX_LOG_ENABLED && TX_CONFIG_LOG_ENABLED)
 #undef NRF_LOG_INFO
 #undef NRF_LOG_WARNING
 #undef NRF_LOG_ERROR
@@ -68,17 +71,32 @@ static bool m_sn_config_window_active;
 static bool m_sn_config_complete;
 static uint32_t m_sn_config_last_activity_ms;
 
+/** 图像采集准备状态：空闲或等待补光与自动算法稳定。 */
+typedef enum
+{
+    CAPTURE_PREP_IDLE = 0,
+    CAPTURE_PREP_WARMUP
+} capture_prep_state_t;
+
+static capture_prep_state_t m_capture_prep_state;
+static uint32_t m_capture_warmup_deadline_ms;
+static volatile bool m_sn_broadcast_due;
+
 /* ============================================================
  * 序列号与初始化
  * ============================================================ */
 
-/** @brief 重新将 g_capsule_sn 同步到 capsule_sn_storage_get_active() 指向的数据。 */
-void capsule_sn_refresh(void)
+/** @brief 初始化SN存储，并将当前生效SN同步到图像与Radio业务缓冲区。 */
+void capsule_sn_init(void)
 {
-    const uint8_t *active_sn = capsule_sn_storage_get_active();
-    memcpy(g_capsule_sn, active_sn, LEGACY_CAPSULE_SN_SIZE);
+    const uint8_t *active_sn;
+
+    capsule_sn_storage_init();                                                 // ① 根据Flash内容选择用户SN或FICR DEVICEID
+    active_sn = capsule_sn_storage_get_active();
+    memcpy(g_capsule_sn, active_sn, LEGACY_CAPSULE_SN_SIZE);                   // ② 保存当前生效SN供广播、图片包和ACK匹配使用
 }
 
+/** @brief 打开上电SN配置窗口并从当前时刻开始计算3秒无操作超时。 */
 void capsule_sn_config_window_begin(void)
 {
     m_sn_update_pending = false;
@@ -88,6 +106,7 @@ void capsule_sn_config_window_begin(void)
     NRF_LOG_INFO("[SN CONFIG] window OPEN");
 }
 
+/** @brief 关闭SN配置窗口，同时丢弃尚未确认写入的暂存SN。 */
 void capsule_sn_config_window_end(void)
 {
     m_sn_config_window_active = false;
@@ -96,17 +115,19 @@ void capsule_sn_config_window_end(void)
                  m_sn_config_complete ? "configured" : "timeout");
 }
 
+/** @brief 查询本次上电配置流程是否已经通过0x46成功写入SN。 */
 bool capsule_sn_config_is_complete(void)
 {
     return m_sn_config_complete;
 }
 
+/** @brief 返回最近一条合法配置命令的时间，用于刷新3秒无操作超时。 */
 uint32_t capsule_sn_config_last_activity_ms(void)
 {
     return m_sn_config_last_activity_ms;
 }
 
-/** @brief 启动 Radio 与 CX93510 所需的 16 MHz 外部高频晶振。 */
+/** @brief 启动Radio所需的外部高频晶振HFXO（板上32 MHz晶体）。 */
 void image_clock_init(void)
 {
     NRF_CLOCK->EVENTS_HFCLKSTARTED = 0u;
@@ -152,7 +173,7 @@ static void radio_arm_rx(void)
 void radio_configure_image_link(void)
 {
     NRF_RADIO->TXPOWER = RADIO_TXPOWER_TXPOWER_Pos4dBm;
-    NRF_RADIO->FREQUENCY = 0u;
+    NRF_RADIO->FREQUENCY = RADIO_FREQUENCY_OFFSET;
     NRF_RADIO->MODE = RADIO_MODE_MODE_Nrf_2Mbit;
     NRF_RADIO->PREFIX0 = 0xC4C3C2E7u;
     NRF_RADIO->PREFIX1 = 0xC5C6C7C8u;
@@ -178,8 +199,19 @@ void radio_configure_image_link(void)
     radio_arm_rx();
 }
 
-/** @brief 阻塞发送一个 254 字节 Radio 包，发送完成立即恢复 RX。 */
-static void radio_send_packet(const uint8_t *packet)
+/** @brief 关闭Radio及其中断；下次发送或显式等待ACK时再启动。 */
+void radio_enter_idle(void)
+{
+    NVIC_DisableIRQ(RADIO_IRQn);
+    radio_disable();
+    NRF_RADIO->EVENTS_END = 0u;
+    NRF_RADIO->EVENTS_CRCOK = 0u;
+    NRF_RADIO->EVENTS_CRCERROR = 0u;
+    NVIC_ClearPendingIRQ(RADIO_IRQn);
+}
+
+/** @brief 阻塞发送一个254字节Radio包；仅按调用者要求恢复RX。 */
+static void radio_send_packet(const uint8_t *packet, bool resume_rx)
 {
     NVIC_DisableIRQ(RADIO_IRQn);
     radio_disable();
@@ -191,12 +223,16 @@ static void radio_send_packet(const uint8_t *packet)
     NRF_RADIO->TASKS_TXEN = 1u;
     while (NRF_RADIO->EVENTS_DISABLED == 0u) {}
     NRF_RADIO->EVENTS_END = 0u;
-    NRF_RADIO->SHORTS = RADIO_SHORTS_READY_START_Msk;
-    radio_arm_rx();
     NVIC_ClearPendingIRQ(RADIO_IRQn);
-    NVIC_EnableIRQ(RADIO_IRQn);
+    if (resume_rx)
+    {
+        NRF_RADIO->SHORTS = RADIO_SHORTS_READY_START_Msk;
+        radio_arm_rx();
+        NVIC_EnableIRQ(RADIO_IRQn);
+    }
 }
 
+/** @brief 计算ZAYS控制帧数据区的8位累加校验和。 */
 static uint8_t control_checksum(const uint8_t *data, uint16_t length)
 {
     uint8_t checksum = 0u;
@@ -208,6 +244,7 @@ static uint8_t control_checksum(const uint8_t *data, uint16_t length)
     return checksum;
 }
 
+/** @brief 组装配置应答并通过Radio重复发送3次，提高短帧可靠性。 */
 static void radio_send_control_response(uint8_t command,
                                         const uint8_t *payload,
                                         uint16_t payload_length)
@@ -234,10 +271,14 @@ static void radio_send_control_response(uint8_t command,
     NRF_LOG_HEXDUMP_INFO(m_tx_packet, frame_length);
     for (repeat = 0u; repeat < 3u; ++repeat)
     {
-        radio_send_packet(m_tx_packet);
+        radio_send_packet(m_tx_packet, true); /* 配置窗口内继续接收下一条命令。 */
     }
 }
 
+/**
+ * @brief 解析并执行0x40～0x46出厂SN配置命令。
+ * @return true表示输入是ZAYS控制帧并已处理，false表示不是控制帧。
+ */
 static bool radio_process_control_frame(const uint8_t *packet)
 {
     uint16_t payload_length;
@@ -354,7 +395,7 @@ static bool radio_process_control_frame(const uint8_t *packet)
                    LEGACY_CAPSULE_SN_SIZE);
             if (capsule_sn_storage_write(&requested_sn))
             {
-                capsule_sn_refresh();
+                capsule_sn_init();
                 m_sn_update_pending = false;
                 m_sn_config_complete = true;
                 NRF_LOG_INFO("[CTRL] SN Flash write OK; active SN:");
@@ -388,31 +429,33 @@ static bool radio_process_control_frame(const uint8_t *packet)
     return true;
 }
 
+/** @brief 主循环服务：链路空闲时按 SN_BROADCAST_PERIOD_MS 广播当前生效SN。 */
 void capsule_sn_broadcast_service(void)
 {
-    static uint32_t last_broadcast_ms;
     if (g_image_tx.active || g_image_tx.awaiting_ack ||
-        ((last_broadcast_ms != 0u) &&
-         ((g_time_ms - last_broadcast_ms) < SN_BROADCAST_PERIOD_MS)))
+        !m_sn_broadcast_due)
     {
         return;
     }
-    last_broadcast_ms = g_time_ms;
+    m_sn_broadcast_due = false;
     memset(m_tx_packet, 0, sizeof(m_tx_packet));
     m_tx_packet[0] = LEGACY_CMD_CAPSULE_SN_BROADCAST;
     memcpy(&m_tx_packet[1], g_capsule_sn, LEGACY_CAPSULE_SN_SIZE);
-    radio_send_packet(m_tx_packet);
+    tx_runtime_log_sn_broadcast(g_capsule_sn);
+    radio_send_packet(m_tx_packet, false);
 }
 
+/** @brief 配置成功后立即连续广播指定次数的当前SN。 */
 void capsule_sn_broadcast_burst(uint8_t repeat_count)
 {
     uint8_t index;
     memset(m_tx_packet, 0, sizeof(m_tx_packet));
     m_tx_packet[0] = LEGACY_CMD_CAPSULE_SN_BROADCAST;
     memcpy(&m_tx_packet[1], g_capsule_sn, LEGACY_CAPSULE_SN_SIZE);
+    tx_runtime_log_sn_broadcast(g_capsule_sn);
     for (index = 0u; index < repeat_count; ++index)
     {
-        radio_send_packet(m_tx_packet);
+        radio_send_packet(m_tx_packet, false);
     }
 }
 
@@ -422,14 +465,14 @@ void capsule_sn_broadcast_burst(uint8_t repeat_count)
  * LED 控制
  * ============================================================ */
 
-/** @brief 初始化 P0.08 发送指示灯，默认低电平（熄灭）。 */
+/** @brief 初始化 P0.08 拍照补光灯，默认低电平（熄灭）。 */
 void image_tx_led_init(void)
 {
     nrf_gpio_cfg_output(IMAGE_TX_LED_PIN);
     nrf_gpio_pin_clear(IMAGE_TX_LED_PIN);
 }
 
-/** @brief 控制 P0.08 发送指示灯亮灭。 */
+/** @brief 控制 P0.08 拍照补光灯亮灭。 */
 void image_tx_led_set(bool on)
 {
     if (on)
@@ -498,6 +541,7 @@ void radio_rx_process(void)
         {
             g_image_tx.awaiting_ack = false;                                  // ⑤ ACK 匹配成功：清等待标志
             g_image_tx.retry_count = 0u;                                      //   清重发计数
+            radio_enter_idle();                                               //   ACK已收到，立即关闭持续RX
         }
         m_rx_queue.head = (uint8_t)((head + 1u) % RADIO_QUEUE_DEPTH);         // ⑥ 无论是否匹配 ACK，都要把这包出队，否则会卡队列
     }
@@ -509,22 +553,126 @@ void radio_rx_process(void)
  * TIMER1 1 ms 周期中断
  * ============================================================ */
 
-/** @brief TIMER1 1 ms 周期中断：累加时间戳，每 IMAGE_PERIOD_MS 置采集标志。 */
+/** @brief TIMER1 1 ms周期中断：仅在拍照、发送和ACK等待期间运行。 */
 void TIMER1_IRQHandler(void)
 {
-    static uint16_t image_period_count;
     if (NRF_TIMER1->EVENTS_COMPARE[0] != 0u)
     {
         NRF_TIMER1->EVENTS_COMPARE[0] = 0u;
         ++g_time_ms;
-        if (++image_period_count >= IMAGE_PERIOD_MS)
-        {
-            image_period_count = 0u;
-#if IMAGE_TRANSMISSION_ENABLED
-            g_capture_due = true;
-#endif
-        }
     }
+}
+
+/** @brief RTC2周期中断只置请求标志，硬件访问仍在主循环执行。 */
+void RTC2_IRQHandler(void)
+{
+    if (NRF_RTC2->EVENTS_COMPARE[0] != 0u)
+    {
+        NRF_RTC2->EVENTS_COMPARE[0] = 0u;
+        NRF_RTC2->CC[0] = (NRF_RTC2->COUNTER +
+                           ((32768u * IMAGE_PERIOD_MS) / 1000u)) & 0x00FFFFFFu;
+        m_sn_broadcast_due = true;
+#if IMAGE_TRANSMISSION_ENABLED
+        g_capture_due = true;
+#endif
+    }
+}
+
+/**
+ * @brief  图像低功耗调度器初始化
+ * @note   使用 nRF52 的 RTC2 + RC 低频时钟，实现周期性唤醒，
+ *         每隔 IMAGE_PERIOD_MS 毫秒触发一次 RTC2_IRQHandler 中断。
+ */
+void image_low_power_scheduler_init(void)
+{
+    /* ------------------------------------------------------------------
+     * 1. 配置低频时钟源（LFCLK）为内部 RC 振荡器
+     *    - LFCLK = 32768 Hz，是 RTC 的时钟源
+     *    - RC 振荡器：功耗最低、启动最快，但精度较差（±250 ppm）
+     *    - 若选 XTAL 则需要外部 32.768kHz 晶振，精度高但功耗和成本更高
+     * ------------------------------------------------------------------ */
+    NRF_CLOCK->LFCLKSRC = CLOCK_LFCLKSRC_SRC_RC;
+
+    /* 清除 LFCLKSTARTED 事件标志，避免旧的标志误判 */
+    NRF_CLOCK->EVENTS_LFCLKSTARTED = 0u;
+
+    /* 触发 LFCLK 启动任务 */
+    NRF_CLOCK->TASKS_LFCLKSTART = 1u;
+
+    /* 轮询等待 LFCLK 启动完成
+     * 必须等 LFCLK 稳定后才能配置 RTC，否则 RTC 无法正常工作 */
+    while (NRF_CLOCK->EVENTS_LFCLKSTARTED == 0u) {}
+
+    /* ------------------------------------------------------------------
+     * 2. 停止并清零 RTC2
+     *    - 配置前先 STOP，防止计数器在配置过程中继续跑
+     *    - CLEAR 让计数器从 0 开始，保证定时周期准确
+     * ------------------------------------------------------------------ */
+    NRF_RTC2->TASKS_STOP  = 1u;
+    NRF_RTC2->TASKS_CLEAR = 1u;
+
+    /* ------------------------------------------------------------------
+     * 3. 设置预分频器
+     *    - RTC 计数频率 = 32768 / 2^PRESCALER
+     *    - PRESCALER = 0 → 32768 Hz，每 tick ≈ 30.5 µs，分辨率最高
+     *    - 适合毫秒级定时；若要秒级定时可增大 PRESCALER
+     * ------------------------------------------------------------------ */
+    NRF_RTC2->PRESCALER = 0u;
+
+    /* ------------------------------------------------------------------
+     * 4. 设置比较值 CC[0]，决定定时周期
+     *    - 计数值从 0 开始，每 tick +1
+     *    - 当计数值 == CC[0] 时，触发 EVENTS_COMPARE[0]
+     *    - 计数频率 32768 Hz，所以：
+     *          CC[0] = 32768 * IMAGE_PERIOD_MS / 1000
+     *    - 例如 IMAGE_PERIOD_MS = 100 → CC[0] = 3276 → 100 ms 触发一次
+     *    - 注意：CC[0] 是 24 位寄存器，最大 16777215，约 512 秒
+     * ------------------------------------------------------------------ */
+    NRF_RTC2->CC[0] = (32768u * IMAGE_PERIOD_MS) / 1000u;
+
+    /* 清除 COMPARE[0] 事件标志，防止残留标志导致中断误触发 */
+    NRF_RTC2->EVENTS_COMPARE[0] = 0u;
+
+    /* ------------------------------------------------------------------
+     * 5. 使能 COMPARE[0] 中断
+     *    - nRF52 外设是"事件 → 中断"两级结构：
+     *          计数匹配 → EVENTS_COMPARE[0] = 1
+     *                    → 若 INTENSET 对应位为 1
+     *                    → 触发 RTC2_IRQn
+     *    - 中断服务函数中必须手动清 EVENTS_COMPARE[0]，否则会反复触发
+     * ------------------------------------------------------------------ */
+    NRF_RTC2->INTENSET = RTC_INTENSET_COMPARE0_Msk;
+
+    /* ------------------------------------------------------------------
+     * 6. 配置 NVIC（嵌套向量中断控制器）
+     * ------------------------------------------------------------------ */
+
+    /* 清除之前可能挂起的 RTC2 中断，避免一使能就立即进中断 */
+    NVIC_ClearPendingIRQ(RTC2_IRQn);
+
+    /* 设置中断优先级
+     * nRF52 优先级范围：0（最高）~ 7（最低）
+     * 这里设为 7（最低），说明该定时任务不紧急，可被其他中断打断 */
+    NVIC_SetPriority(RTC2_IRQn, 7u);
+
+    /* 使能 RTC2 中断 */
+    NVIC_EnableIRQ(RTC2_IRQn);
+
+    /* ------------------------------------------------------------------
+     * 7. 启动 RTC2
+     *    计数器开始运行，定时器正式工作
+     *    此后每 IMAGE_PERIOD_MS 毫秒触发一次 RTC2_IRQHandler
+     * ------------------------------------------------------------------ */
+    NRF_RTC2->TASKS_START = 1u;
+}
+
+bool image_runtime_busy(void)
+{
+    return m_sn_broadcast_due ||
+           g_capture_due ||
+           (m_capture_prep_state != CAPTURE_PREP_IDLE) ||
+           g_image_tx.active ||
+           g_image_tx.awaiting_ack;
 }
 
 
@@ -555,37 +703,95 @@ static void select_image_block(bool config_block)
                                            IMAGE_PAYLOAD_SIZE);
 }
 
-/** @brief 处理每 IMAGE_PERIOD_MS 一次的图像采集请求。 */
+/**
+ * @brief 非阻塞处理周期采集：开灯并唤醒，等待AE/AWB稳定后抓图，再休眠。
+ * @note  补光预热期间函数立即返回，主循环仍可处理Radio、日志和看门狗。
+ */
 void image_capture_task(void)
 {
-    if (!g_capture_due)                                                          // ① TIMER1 周期未到：直接返回，不抢占主循环
+    bool capture_ok;
+    adxl362_sample_t accel_sample;
+
+    if (m_capture_prep_state == CAPTURE_PREP_WARMUP)                            // ① 已开灯并唤醒：等待稳定截止时间
     {
-        return;       //没到周期直接返回
+        if ((int32_t)(g_time_ms - m_capture_warmup_deadline_ms) < 0)
+        {
+            return;
+        }
+
+        g_image_tx.accel_valid = adxl362_read_sample(&accel_sample);            // ② 在触发图像采集前锁存本帧三轴原始值
+        (void)adxl362_standby();                                                // ③ 读完立即待机，直至下一拍摄周期
+        if (g_image_tx.accel_valid)
+        {
+            g_image_tx.accel_x_raw = accel_sample.raw_x;
+            g_image_tx.accel_y_raw = accel_sample.raw_y;
+            g_image_tx.accel_z_raw = accel_sample.raw_z;
+        }
+        capture_ok = cx93510_capture_one(&g_image_tx.frame,                     // ④ 紧接着触发采集，使姿态与本帧曝光时刻对应
+                                         IMAGE_CAPTURE_TIMEOUT_MS);
+        image_tx_led_set(false);                                                // ④ 图像已进入CX93510帧缓冲，立即关闭补光灯
+        (void)ov7676_sleep();                                                    // ⑤ 传感器进入软件休眠，发送阶段不再持续工作
+        m_capture_prep_state = CAPTURE_PREP_IDLE;
+        if (!capture_ok)
+        {
+            return;
+        }
     }
-    g_capture_due = false;                                                       // ② 立刻清标志，避免下一轮主循环重复进入采集流程
-    if (g_image_tx.active || g_image_tx.awaiting_ack)                           // ③ 上一帧还在发或还在等 ACK：放弃本周期，防止 CX93510 帧缓冲被新帧覆盖
+    else
     {
-        return;                                                                  //   静默跳过，不再打印 WARNING（避免日志刷屏）
+        if (!g_capture_due)                                                      // ⑤ 周期未到：保持传感器休眠
+        {
+            return;
+        }
+        g_capture_due = false;                                                   // ⑥ 消费本次周期请求
+        if (g_image_tx.active || g_image_tx.awaiting_ack)                       // ⑦ 上一帧未结束：跳过本周期，避免覆盖帧缓冲
+        {
+            return;
+        }
+
+        image_tx_led_set(true);                                                  // ⑧ 先开补光灯，使传感器从唤醒起就看到正式光源
+        if (!adxl362_measurement_start())                                        // ⑨ 同期启动100Hz测量，预热25ms后可取得新样本
+        {
+            g_image_tx.accel_valid = false;
+        }
+        if (!ov7676_wakeup())                                                     // ⑨ 恢复OV7676连续视频输出
+        {
+            (void)adxl362_standby();
+            image_tx_led_set(false);
+            (void)ov7676_sleep();
+            return;
+        }
+        m_capture_warmup_deadline_ms = g_time_ms +
+                                       IMAGE_CAPTURE_LIGHT_WARMUP_MS;            // ⑩ 非阻塞等待约1帧，沿用旧工程稳定时序
+        m_capture_prep_state = CAPTURE_PREP_WARMUP;
+        return;
     }
-    if (!cx93510_capture_one(&g_image_tx.frame, IMAGE_CAPTURE_TIMEOUT_MS))      // ⑤ 调用 CX93510 采集一帧并在超时内读回帧头（offset/size）
+    if (g_image_tx.frame.jpeg_size == 0u)                                      // ⑥ 空帧不分配帧号，也不启动Radio
     {
         image_tx_led_set(false);
         return;
     }
-    if ((g_image_tx.frame.jpeg_size == 0u) ||                                   // ⑥ 过滤异常帧：JPEG 长度为 0 或超出协议上限的帧直接丢弃
-        (g_image_tx.frame.jpeg_size > LEGACY_IMAGE_MAX_SIZE))
+    if (g_image_tx.frame.jpeg_size > LEGACY_IMAGE_MAX_SIZE)                    // ⑦ 在TX端拒绝STM32旧记录必然容纳不下的图像
     {
+        tx_runtime_log_image_rejected(g_image_tx.frame.jpeg_size,
+                                      LEGACY_IMAGE_MAX_SIZE);
         image_tx_led_set(false);
         return;
     }
-    g_image_tx.frame_id = (uint16_t)((g_image_tx.frame_id + 1u) % 255u);        // ⑦ 帧 ID 自增 1（0~255 循环），供接收端区分不同帧
+    g_image_tx.frame_id = (uint16_t)((g_image_tx.frame_id + 1u) % 255u);        // ⑧ 仅合法帧ID自增，供接收端区分不同帧
+    if (g_image_tx.accel_valid)
+    {
+        adxl362_log_raw_sample(g_image_tx.frame_id, &accel_sample);
+    }
     g_image_tx.legacy_checksum = 0u;                                            // ⑧ 清零本帧 JPEG 8 位累加校验和
     g_image_tx.retry_count = 0u;                                                // ⑨ 清零本帧已重发计数
     g_image_tx.legacy_send_begin = true;                                        // ⑩ 置首轮标志，让 image_tx_service 在第 0 片连发两次 BEGIN 包
     select_image_block(false);                                                  // ⑪ 选中 JPEG 块（不是 config 块），写入 offset/size 并算出总分片数
+    tx_runtime_log_image_broadcast(g_image_tx.frame_id,
+                                   g_image_tx.frame.jpeg_size,
+                                   g_image_tx.fragment_count);
     g_image_tx.next_fragment_ms = g_time_ms;                                    // ⑫ 允许下一分片立即发送（image_tx_service 不会等到未来时刻）
     g_image_tx.active = true;                                                   // ⑬ 置位活动标志，通知 image_tx_service 开始处理本帧
-    image_tx_led_set(true);                                                     // ⑭ 点亮 P0.08 发送指示灯，提示用户正在无线发送图像
 }
 
 /** @brief 非阻塞式图像分片发送状态机，每次最多发送一个分片。 */
@@ -615,8 +821,12 @@ void image_tx_service(void)
         m_tx_packet[14] = VERSION_MAIN;                                          //   胶囊固件主版本号
         m_tx_packet[15] = VERSION_SUB;                                           //   胶囊固件子版本号
         m_tx_packet[16] = VERSION_TEST;                                          //   胶囊固件测试版本号
-        radio_send_packet(m_tx_packet);                                          //   第 1 次发 BEGIN
-        radio_send_packet(m_tx_packet);                                          //   第 2 次发 BEGIN（抗丢包）
+        m_tx_packet[LEGACY_BEGIN_ACCEL_VALID_OFFSET] = g_image_tx.accel_valid ? 1u : 0u;
+        LegacyProtocol_PutI16Be(&m_tx_packet[LEGACY_BEGIN_ACCEL_X_OFFSET], g_image_tx.accel_x_raw);
+        LegacyProtocol_PutI16Be(&m_tx_packet[LEGACY_BEGIN_ACCEL_Y_OFFSET], g_image_tx.accel_y_raw);
+        LegacyProtocol_PutI16Be(&m_tx_packet[LEGACY_BEGIN_ACCEL_Z_OFFSET], g_image_tx.accel_z_raw);
+        radio_send_packet(m_tx_packet, false);                                   //   第 1 次发 BEGIN
+        radio_send_packet(m_tx_packet, false);                                   //   第 2 次发 BEGIN（抗丢包）
     }
 
     memset(m_tx_packet, 0, sizeof(m_tx_packet));                              // ⑥ 准备 DATA 包：先清零 buffer
@@ -640,7 +850,7 @@ void image_tx_service(void)
         g_image_tx.legacy_checksum = (uint8_t)(g_image_tx.legacy_checksum +
             m_tx_packet[LEGACY_IMAGE_PACKET_HEADER_SIZE + checksum_index]);
     }
-    radio_send_packet(m_tx_packet);                                           // ⑨ 真正发送 DATA 包（一次循环只发一包）
+    radio_send_packet(m_tx_packet, false);                                    // ⑨ DATA后保持Radio关闭
 
     g_image_tx.block_sent = (uint16_t)(g_image_tx.block_sent + payload_length); // ⑩ 已发字节数累加
     ++g_image_tx.fragment_index;                                              // ⑪ 分片编号 +1
@@ -661,8 +871,7 @@ void image_tx_service(void)
         m_tx_packet[1] = (uint8_t)g_image_tx.frame_id;                        //   帧 ID
         memcpy(&m_tx_packet[2], g_capsule_sn, LEGACY_CAPSULE_SN_SIZE);        //   8 字节胶囊序列号
         m_tx_packet[10] = g_image_tx.legacy_checksum;                         //   整张图像的 8 位累加校验和
-        radio_send_packet(m_tx_packet);                                       //   发送 END 包
-        image_tx_led_set(false);                                              //   熄灭 P0.08 发送指示灯
+        radio_send_packet(m_tx_packet, g_image_tx.retry_count == 0u);          //   首轮END后才打开RX等待ACK
         g_image_tx.active = false;                                            // ⑯ 清活动标志，本帧数据已发完
         if (g_image_tx.retry_count == 0u)                                     // ⑰ 首次发送：等待接收端 ACK
         {
@@ -686,6 +895,7 @@ void image_ack_service(void)
         return;
     }
     g_image_tx.awaiting_ack = false;                                          // ③ 清 ACK 等待标志（不管后面是否重发，都已超时）
+    radio_enter_idle();                                                       //   ACK窗口结束，关闭Radio RX
     if (g_image_tx.retry_count >= IMAGE_MAX_RETRIES)                          // ④ 已达到最大重发次数：放弃本帧
     {
         g_image_tx.retry_count = 0u;
@@ -697,5 +907,4 @@ void image_ack_service(void)
     g_image_tx.legacy_send_begin = false;                                     // ⑧ 关键：标记不是首轮，image_tx_service 不会重发 BEGIN
     g_image_tx.next_fragment_ms = g_time_ms;                                  // ⑨ 允许下一片立即发送
     g_image_tx.active = true;                                                 // ⑩ 重新置位活动标志，让 image_tx_service 进入重发流程
-    image_tx_led_set(true);                                                   // ⑪ 点亮 P0.08 指示灯
 }

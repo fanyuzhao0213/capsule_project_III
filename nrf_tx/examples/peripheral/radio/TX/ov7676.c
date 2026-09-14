@@ -12,13 +12,16 @@
 #include "nrf_delay.h"
 #include "nrf_gpio.h"
 #include "nrf_log.h"
-#if !TX_INIT_LOG_ENABLED
+#if !(TX_LOG_ENABLED && TX_INIT_LOG_ENABLED)
 #undef NRF_LOG_INFO
 #undef NRF_LOG_WARNING
 #undef NRF_LOG_ERROR
 #define NRF_LOG_INFO(...)
 #define NRF_LOG_WARNING(...)
 #define NRF_LOG_ERROR(...)
+#define TX_INIT_LOG_FLUSH() ((void)0)
+#else
+#define TX_INIT_LOG_FLUSH() NRF_LOG_FLUSH()
 #endif
 #include "nrf_log_ctrl.h"
 
@@ -191,6 +194,18 @@ static const ov7676_reg_t m_ov7676_480x480_yuv422[] =
     {0x580Au, 0x40u, 0u}
 };
 
+/** @brief 将OV7676置于软件休眠状态，降低非采集期间的功耗。 */
+bool ov7676_sleep(void)
+{
+    return cx93510_sensor_write(OV_REG_MODE_SELECT, 0x00u);
+}
+
+/** @brief 唤醒OV7676并恢复视频流，寄存器配置在软件休眠期间保持不变。 */
+bool ov7676_wakeup(void)
+{
+    return cx93510_sensor_write(OV_REG_MODE_SELECT, 0x01u);
+}
+
 /** @brief 顺序写入完整配置表，任意寄存器失败都会停止初始化。 */
 static bool ov7676_write_table(void)
 {
@@ -200,7 +215,7 @@ static bool ov7676_write_table(void)
 
     NRF_LOG_INFO("OV7676 config stage: writing %u production registers",
                  (unsigned)count);
-    NRF_LOG_FLUSH();
+    TX_INIT_LOG_FLUSH();
     for (i = 0u; i < count; ++i)
     {
         const ov7676_reg_t *entry = &m_ov7676_480x480_yuv422[i];
@@ -208,7 +223,7 @@ static bool ov7676_write_table(void)
         {
             NRF_LOG_ERROR("OV7676 config failed: index=%u reg=0x%04x value=0x%02x",
                           (unsigned)i, entry->address, entry->value);
-            NRF_LOG_FLUSH();
+            TX_INIT_LOG_FLUSH();
             return false;
         }
         if (entry->delay_ms != 0u)
@@ -255,7 +270,7 @@ static bool ov7676_verify_output(void)
                  (unsigned)(((uint16_t)height_h << 8) | height_l));
     NRF_LOG_INFO("OV7676 readback: FORMAT=%02x YUV_ORDER=%02x POLARITY=%02x",
                  format, yuv_order, polarity);
-    NRF_LOG_FLUSH();
+    TX_INIT_LOG_FLUSH();
 
     if ((mode != 0x01u) || (io_ctrl != 0x07u) || (data_ctrl != 0xFFu) ||
         (width_h != 0x01u) || (width_l != 0xE0u) ||
@@ -282,7 +297,7 @@ bool ov7676_init(uint16_t *chip_id, uint8_t *revision)
     nrf_delay_ms(5u);
     nrf_gpio_pin_set(OV7676_XSHUTDOWN_PIN);
     NRF_LOG_INFO("OV7676 XSHUTDOWN released; waiting for XVCLK/I2C");
-    NRF_LOG_FLUSH();
+    TX_INIT_LOG_FLUSH();
     nrf_delay_ms(5u);
 
     /* 先读ID确认总线和器件正确，再执行包含软件复位的完整旧版表。 */
@@ -297,7 +312,7 @@ bool ov7676_init(uint16_t *chip_id, uint8_t *revision)
     }
     NRF_LOG_INFO("OV7676 ID OK: 0x%02x%02x, revision=0x%02x",
                  id_h, id_l, rev);
-    NRF_LOG_FLUSH();
+    TX_INIT_LOG_FLUSH();
 
     if (!ov7676_write_table())
     {

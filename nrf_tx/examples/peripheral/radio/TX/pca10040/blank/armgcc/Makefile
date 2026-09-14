@@ -45,6 +45,7 @@ SRC_FILES += \
   $(PROJ_DIR)/spi_bus.c \
   $(PROJ_DIR)/cx93510.c \
   $(PROJ_DIR)/ov7676.c \
+  $(PROJ_DIR)/tx_runtime_log.c \
   $(SDK_ROOT)/external/segger_rtt/SEGGER_RTT.c \
   $(SDK_ROOT)/external/segger_rtt/SEGGER_RTT_Syscalls_GCC.c \
   $(SDK_ROOT)/external/segger_rtt/SEGGER_RTT_printf.c \
@@ -181,5 +182,4 @@ SDK_CONFIG_FILE := ../config/sdk_config.h
 CMSIS_CONFIG_TOOL := $(SDK_ROOT)/external_tools/cmsisconfig/CMSIS_Configuration_Wizard.jar
 sdk_config:
 	java -jar $(CMSIS_CONFIG_TOOL) $(SDK_CONFIG_FILE)
-
 
