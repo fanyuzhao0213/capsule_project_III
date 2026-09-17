@@ -31,13 +31,13 @@
 #define TX_CONFIG_LOG_ENABLED       0u
 
 /** 1：仅输出SN广播、图片发送和ADXL362采样运行日志。 */
-#define TX_RUNTIME_LOG_ENABLED      0u
+#define TX_RUNTIME_LOG_ENABLED      1u
 
 /** 1：输出摄像头/SPI等初始化日志；仅在TX_LOG_ENABLED=1时生效。 */
-#define TX_INIT_LOG_ENABLED         0u
+#define TX_INIT_LOG_ENABLED         1u
 
 /** 1：每次成功采集图像后输出一次ADXL362 XYZ和姿态日志。 */
-#define ADXL362_LOG_ENABLED         0u
+#define ADXL362_LOG_ENABLED         1u
 
 /* 总开关关闭时同步关闭Nordic日志前端和RTT后端，减少Flash、RAM和运行功耗。 */
 #if !TX_LOG_ENABLED
@@ -106,6 +106,10 @@
 
 /** 胶囊 SN 常态广播周期。 */
 #define SN_BROADCAST_PERIOD_MS   500u
+
+/** RX在图像ACK请求选路后，暂停图像并密集发送SN的最长时间。 */
+#define FAST_SCAN_DURATION_MS    1800u
+#define FAST_SCAN_SN_PERIOD_MS   8u
 
 /** SN 配置成功后立即重复广播次数。 */
 #define SN_BROADCAST_STARTUP_REPEAT 3u

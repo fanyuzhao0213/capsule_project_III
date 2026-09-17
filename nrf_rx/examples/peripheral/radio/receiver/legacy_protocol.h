@@ -96,6 +96,12 @@
 /** @brief 图像接收应答：接收板通知发送板某帧图像已成功接收。 */
 #define LEGACY_CMD_IMAGE_RECEIVED_RESPONSE   0x10u
 
+/** TX进入密集SN扫描窗口的确认包；字节1～8为胶囊SN。 */
+#define LEGACY_CMD_FAST_SCAN_START           0x11u
+
+/** RX在图像END后的ACK等待窗口请求暂停图片并快速广播SN。 */
+#define LEGACY_CMD_FAST_SCAN_REQUEST         0x12u
+
 /** @brief 图像数据包：携带一段 JPEG 数据的分片。 */
 #define LEGACY_CMD_IMAGE_DATA                0x80u
 

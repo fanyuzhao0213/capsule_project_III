@@ -473,6 +473,11 @@ bool receiver_control_handle_radio_packet(const uint8_t *packet)
     {
         return false;
     }
+    if (packet[0] == LEGACY_CMD_FAST_SCAN_START)
+    {
+        receiver_antenna_fast_scan_granted(&packet[1]);
+        return true;
+    }
     if ((packet[0] == LEGACY_CMD_CAPSULE_SN_BROADCAST))
     {
         if (!receiver_binding_is_bound())

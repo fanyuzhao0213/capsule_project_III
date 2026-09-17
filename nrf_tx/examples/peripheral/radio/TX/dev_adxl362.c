@@ -157,6 +157,8 @@ bool adxl362_init(void)
         return false;
     }
     m_ready = true;
+    NRF_SPIM1->TASKS_STOP = 1u;
+    NRF_SPIM1->ENABLE = SPIM_ENABLE_ENABLE_Disabled;
     NRF_LOG_INFO("[ADXL362] ready: ID=%02x/%02x/%02x, 2g 100Hz, standby",
                  id[0], id[1], id[2]);
     return true;
@@ -164,10 +166,12 @@ bool adxl362_init(void)
 
 bool adxl362_measurement_start(void)
 {
+    NRF_SPIM1->ENABLE = SPIM_ENABLE_ENABLE_Enabled;
     if (!m_ready ||
         !adxl362_write_reg(ADXL362_REG_POWER_CTL, ADXL362_MEASURE_MODE))
     {
         m_measuring = false;
+        NRF_SPIM1->ENABLE = SPIM_ENABLE_ENABLE_Disabled;
         return false;
     }
     m_measuring = true;
@@ -193,10 +197,15 @@ bool adxl362_read_sample(adxl362_sample_t *sample)
 
 bool adxl362_standby(void)
 {
-    bool success = m_ready &&
-                   adxl362_write_reg(ADXL362_REG_POWER_CTL,
-                                     ADXL362_STANDBY_MODE);
+    bool success;
+
+    NRF_SPIM1->ENABLE = SPIM_ENABLE_ENABLE_Enabled;
+    success = m_ready &&
+              adxl362_write_reg(ADXL362_REG_POWER_CTL,
+                                ADXL362_STANDBY_MODE);
     m_measuring = false;
+    NRF_SPIM1->TASKS_STOP = 1u;
+    NRF_SPIM1->ENABLE = SPIM_ENABLE_ENABLE_Disabled;
     return success;
 }
 

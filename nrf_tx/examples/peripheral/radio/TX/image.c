@@ -81,6 +81,10 @@ typedef enum
 static capture_prep_state_t m_capture_prep_state;
 static uint32_t m_capture_warmup_deadline_ms;
 static volatile bool m_sn_broadcast_due;
+static bool m_fast_scan_active;
+static uint32_t m_fast_scan_start_ms;
+static uint32_t m_fast_scan_next_ms;
+static uint8_t m_fast_scan_broadcast_count;
 
 /* ============================================================
  * 序列号与初始化
@@ -432,7 +436,7 @@ static bool radio_process_control_frame(const uint8_t *packet)
 /** @brief 主循环服务：链路空闲时按 SN_BROADCAST_PERIOD_MS 广播当前生效SN。 */
 void capsule_sn_broadcast_service(void)
 {
-    if (g_image_tx.active || g_image_tx.awaiting_ack ||
+    if (m_fast_scan_active || g_image_tx.active || g_image_tx.awaiting_ack ||
         !m_sn_broadcast_due)
     {
         return;
@@ -443,6 +447,42 @@ void capsule_sn_broadcast_service(void)
     memcpy(&m_tx_packet[1], g_capsule_sn, LEGACY_CAPSULE_SN_SIZE);
     tx_runtime_log_sn_broadcast(g_capsule_sn);
     radio_send_packet(m_tx_packet, false);
+}
+
+/** @brief 仅在RX请求后限时密集广播SN；超时自动恢复原图像周期。 */
+void image_fast_scan_service(void)
+{
+    uint32_t elapsed;
+    if (!m_fast_scan_active)
+    {
+        return;
+    }
+    elapsed = (uint32_t)(g_time_ms - m_fast_scan_start_ms);
+    if (elapsed >= FAST_SCAN_DURATION_MS)
+    {
+        m_fast_scan_active = false;
+        g_capture_due = false;
+        m_sn_broadcast_due = false;
+        NRF_LOG_INFO("[SCAN] window complete; resume image schedule");
+        return;
+    }
+    if ((int32_t)(g_time_ms - m_fast_scan_next_ms) < 0)
+    {
+        return;
+    }
+    if ((elapsed < 120u) && ((m_fast_scan_broadcast_count % 4u) == 0u))
+    {
+        memset(m_tx_packet, 0, sizeof(m_tx_packet));
+        m_tx_packet[0] = LEGACY_CMD_FAST_SCAN_START;
+        memcpy(&m_tx_packet[1], g_capsule_sn, LEGACY_CAPSULE_SN_SIZE);
+        radio_send_packet(m_tx_packet, false);
+    }
+    memset(m_tx_packet, 0, sizeof(m_tx_packet));
+    m_tx_packet[0] = LEGACY_CMD_CAPSULE_SN_BROADCAST;
+    memcpy(&m_tx_packet[1], g_capsule_sn, LEGACY_CAPSULE_SN_SIZE);
+    radio_send_packet(m_tx_packet, false);
+    ++m_fast_scan_broadcast_count;
+    m_fast_scan_next_ms = g_time_ms + FAST_SCAN_SN_PERIOD_MS;
 }
 
 /** @brief 配置成功后立即连续广播指定次数的当前SN。 */
@@ -534,14 +574,33 @@ void radio_rx_process(void)
         {
             /* ZAYS control frame handled above. */
         }
-        else if (g_image_tx.awaiting_ack &&                                  // ② 正在等待 ACK 且命令字匹配
-            (packet[0] == LEGACY_CMD_IMAGE_RECEIVED_RESPONSE) &&
+        else if (g_image_tx.awaiting_ack &&
+            ((packet[0] == LEGACY_CMD_IMAGE_RECEIVED_RESPONSE) ||
+             (packet[0] == LEGACY_CMD_FAST_SCAN_REQUEST)) &&
             (packet[1] == (uint8_t)g_image_tx.frame_id) &&                   // ③ 帧 ID 必须一致（防止旧 ACK 误清当前等待）
             (memcmp(&packet[2], g_capsule_sn, LEGACY_CAPSULE_SN_SIZE) == 0))  // ④ 序列号必须一致（防止其他设备的 ACK 干扰）
         {
+            bool fast_scan_requested =
+                (packet[0] == LEGACY_CMD_FAST_SCAN_REQUEST);
+            if (!fast_scan_requested)
+            {
+                tx_runtime_log_ack_received(g_image_tx.frame_id);
+            }
             g_image_tx.awaiting_ack = false;                                  // ⑤ ACK 匹配成功：清等待标志
             g_image_tx.retry_count = 0u;                                      //   清重发计数
             radio_enter_idle();                                               //   ACK已收到，立即关闭持续RX
+            cx93510_host_suspend();                                           //   ACK后关闭nRF侧SPIM0
+            if (fast_scan_requested)
+            {
+                m_fast_scan_active = true;
+                m_fast_scan_start_ms = g_time_ms;
+                m_fast_scan_next_ms = g_time_ms;
+                m_fast_scan_broadcast_count = 0u;
+                g_capture_due = false;
+                m_sn_broadcast_due = false;
+                NRF_LOG_INFO("[SCAN] RX request accepted; pause image for %ums",
+                             (unsigned)FAST_SCAN_DURATION_MS);
+            }
         }
         m_rx_queue.head = (uint8_t)((head + 1u) % RADIO_QUEUE_DEPTH);         // ⑥ 无论是否匹配 ACK，都要把这包出队，否则会卡队列
     }
@@ -668,7 +727,7 @@ void image_low_power_scheduler_init(void)
 
 bool image_runtime_busy(void)
 {
-    return m_sn_broadcast_due ||
+    return m_fast_scan_active || m_sn_broadcast_due ||
            g_capture_due ||
            (m_capture_prep_state != CAPTURE_PREP_IDLE) ||
            g_image_tx.active ||
@@ -712,6 +771,12 @@ void image_capture_task(void)
     bool capture_ok;
     adxl362_sample_t accel_sample;
 
+    if (m_fast_scan_active)
+    {
+        g_capture_due = false;
+        return;
+    }
+
     if (m_capture_prep_state == CAPTURE_PREP_WARMUP)                            // ① 已开灯并唤醒：等待稳定截止时间
     {
         if ((int32_t)(g_time_ms - m_capture_warmup_deadline_ms) < 0)
@@ -734,6 +799,7 @@ void image_capture_task(void)
         m_capture_prep_state = CAPTURE_PREP_IDLE;
         if (!capture_ok)
         {
+            cx93510_host_suspend();
             return;
         }
     }
@@ -749,6 +815,7 @@ void image_capture_task(void)
             return;
         }
 
+        cx93510_host_resume();                                                    // ⑧ 拍照前恢复nRF侧SPIM0，P0.11始终为高
         image_tx_led_set(true);                                                  // ⑧ 先开补光灯，使传感器从唤醒起就看到正式光源
         if (!adxl362_measurement_start())                                        // ⑨ 同期启动100Hz测量，预热25ms后可取得新样本
         {
@@ -759,6 +826,7 @@ void image_capture_task(void)
             (void)adxl362_standby();
             image_tx_led_set(false);
             (void)ov7676_sleep();
+            cx93510_host_suspend();
             return;
         }
         m_capture_warmup_deadline_ms = g_time_ms +
@@ -769,6 +837,7 @@ void image_capture_task(void)
     if (g_image_tx.frame.jpeg_size == 0u)                                      // ⑥ 空帧不分配帧号，也不启动Radio
     {
         image_tx_led_set(false);
+        cx93510_host_suspend();
         return;
     }
     if (g_image_tx.frame.jpeg_size > LEGACY_IMAGE_MAX_SIZE)                    // ⑦ 在TX端拒绝STM32旧记录必然容纳不下的图像
@@ -776,6 +845,7 @@ void image_capture_task(void)
         tx_runtime_log_image_rejected(g_image_tx.frame.jpeg_size,
                                       LEGACY_IMAGE_MAX_SIZE);
         image_tx_led_set(false);
+        cx93510_host_suspend();
         return;
     }
     g_image_tx.frame_id = (uint16_t)((g_image_tx.frame_id + 1u) % 255u);        // ⑧ 仅合法帧ID自增，供接收端区分不同帧
@@ -843,6 +913,7 @@ void image_tx_service(void)
         g_image_tx.awaiting_ack = false;
         g_image_tx.retry_count = 0u;
         image_tx_led_set(false);
+        cx93510_host_suspend();
         return;
     }
     for (checksum_index = 0u; checksum_index < payload_length; checksum_index++) // ⑧ 累加本段载荷到 8 位校验和
@@ -882,6 +953,7 @@ void image_tx_service(void)
         {
             g_image_tx.awaiting_ack = false;
             g_image_tx.retry_count = 0u;
+            cx93510_host_suspend();                                           //   重发结束，关闭nRF侧SPIM0
         }
     }
 }
@@ -894,11 +966,15 @@ void image_ack_service(void)
     {
         return;
     }
+    tx_runtime_log_ack_timeout(g_image_tx.frame_id,
+                               g_image_tx.retry_count,
+                               IMAGE_MAX_RETRIES);
     g_image_tx.awaiting_ack = false;                                          // ③ 清 ACK 等待标志（不管后面是否重发，都已超时）
     radio_enter_idle();                                                       //   ACK窗口结束，关闭Radio RX
     if (g_image_tx.retry_count >= IMAGE_MAX_RETRIES)                          // ④ 已达到最大重发次数：放弃本帧
     {
         g_image_tx.retry_count = 0u;
+        cx93510_host_suspend();
         return;
     }
     g_image_tx.retry_count++;                                                 // ⑤ 重发计数 +1

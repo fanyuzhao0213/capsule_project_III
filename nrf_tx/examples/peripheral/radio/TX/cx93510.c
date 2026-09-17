@@ -27,6 +27,8 @@
 /* CX93510帧缓冲RAM电源控制脚，高电平允许RAM工作。 */
 #define CX_PD_RAM_PIN       11u
 
+static bool m_host_interface_active;
+
 /* JPEG控制/状态寄存器。 */
 #define CX_REG_DIFF_JPEG    0x20u
 #define CX_REG_JPEG_STATUS  0x21u
@@ -273,6 +275,7 @@ bool cx93510_init(uint8_t *revision)
     spi_bus_init();
     nrf_gpio_cfg_output(CX_PD_RAM_PIN);
     nrf_gpio_pin_set(CX_PD_RAM_PIN);
+    m_host_interface_active = true;
     NRF_LOG_INFO("CX93510 PD_RAM enabled on P0.%02u", (unsigned)CX_PD_RAM_PIN);
     nrf_delay_ms(5u);
     NRF_LOG_INFO("CX93510 detect stage: sending SPI auto-detect transaction");
@@ -334,6 +337,28 @@ bool cx93510_init(uint8_t *revision)
     }
     NRF_LOG_INFO("CX93510 configured: 480x480 YUY2, direct JPEG, DCT=00/03");
     return true;
+}
+
+void cx93510_host_resume(void)
+{
+    if (m_host_interface_active)
+    {
+        return;
+    }
+    spi_bus_resume();
+    m_host_interface_active = true;
+    NRF_LOG_INFO("[POWER] CX93510 host SPIM0 ON, frame RAM kept ON");
+}
+
+void cx93510_host_suspend(void)
+{
+    if (!m_host_interface_active)
+    {
+        return;
+    }
+    spi_bus_suspend();
+    m_host_interface_active = false;
+    NRF_LOG_INFO("[POWER] CX93510 host SPIM0 OFF, frame RAM kept ON");
 }
 
 /**

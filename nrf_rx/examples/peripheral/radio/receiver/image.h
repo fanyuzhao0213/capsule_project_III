@@ -115,6 +115,7 @@ bool receiver_antenna_service(void);
 
 /** @brief 绑定或解绑完成后立即切换相应天线策略。 */
 void receiver_antenna_binding_changed(void);
+void receiver_antenna_fast_scan_granted(const uint8_t *sn);
 
 /** @brief 完整接收绑定胶囊图片后刷新链路存活时间。 */
 void receiver_antenna_note_complete_image(void);

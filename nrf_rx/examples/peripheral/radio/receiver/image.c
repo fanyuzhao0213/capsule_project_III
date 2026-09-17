@@ -93,6 +93,15 @@ static bool m_last_capsule_sn_valid;
 static uint8_t m_candidate_antenna[3];
 static uint8_t m_candidate_count;
 static uint8_t m_candidate_index;
+static bool m_scan_request_pending;
+static uint8_t m_scan_request_attempts;
+static volatile bool m_scan_end_pending;
+static volatile uint8_t m_scan_end_frame_id;
+static uint32_t m_scan_request_hold_until_ms;
+static bool m_fast_scan_start_pending;
+static bool m_fast_scan_active;
+static uint8_t m_scan_round_limit;
+static uint32_t m_scan_dwell_ms;
 static uint32_t m_antenna_deadline_ms;
 static bool m_discovery_holding;
 static volatile uint32_t m_last_target_packet_ms;
@@ -100,6 +109,9 @@ static uint32_t m_last_complete_image_ms;
 static uint8_t m_failed_frame_count;
 static volatile uint32_t m_antenna_time_ms;
 static volatile bool m_antenna_service_due;
+
+static void receiver_send_fast_scan_request(uint8_t image_id,
+                                            const uint8_t *capsule_sn);
 
 /** 最终有效帧率统计：Radio重组、UART忙丢帧和STM交付分别计数。 */
 static uint32_t m_rx_frame_begin_ticks;
@@ -131,7 +143,8 @@ static bool receiver_packet_matches_bound_sn(const uint8_t *packet)
     {
         return false;
     }
-    if (packet[0] == LEGACY_CMD_CAPSULE_SN_BROADCAST)
+    if ((packet[0] == LEGACY_CMD_CAPSULE_SN_BROADCAST) ||
+        (packet[0] == LEGACY_CMD_FAST_SCAN_START))
     {
         return receiver_binding_matches(&packet[1]);
     }
@@ -255,12 +268,34 @@ void RADIO_IRQHandler(void)
 
         if (m_antenna_scan_active)
         {
+            /* END 自带帧 ID 和绑定 SN；即使没有 BEGIN，也可请求 TX 扫描。 */
+            if (!m_fast_scan_active && m_scan_request_pending &&
+                (NRF_RADIO->CRCSTATUS != 0u) &&
+                (m_receiver_packet[0] == LEGACY_CMD_IMAGE_END) &&
+                receiver_packet_matches_bound_sn(m_receiver_packet))
+            {
+                m_scan_end_frame_id = m_receiver_packet[1];
+                m_scan_end_pending = true;
+            }
+            if (!m_fast_scan_active && m_scan_request_pending &&
+                (NRF_RADIO->CRCSTATUS != 0u) &&
+                (m_receiver_packet[0] == LEGACY_CMD_FAST_SCAN_START) &&
+                receiver_packet_matches_bound_sn(m_receiver_packet))
+            {
+                m_fast_scan_start_pending = true;
+                m_scan_request_pending = false;
+                m_scan_request_attempts = 0u;
+            }
             ++m_antenna_scan_total;
             if ((NRF_RADIO->CRCSTATUS != 0u) &&
                 receiver_packet_matches_bound_sn(m_receiver_packet))
             {
-                ++m_antenna_scan_crc_ok;
-                m_antenna_scan_rssi_sum += NRF_RADIO->RSSISAMPLE;
+                if (!m_fast_scan_active ||
+                    (m_receiver_packet[0] == LEGACY_CMD_CAPSULE_SN_BROADCAST))
+                {
+                    ++m_antenna_scan_crc_ok;
+                    m_antenna_scan_rssi_sum += NRF_RADIO->RSSISAMPLE;
+                }
             }
             receiver_radio_arm();
             return;
@@ -335,10 +370,11 @@ static void receiver_build_device_info(uint8_t *device_info)
 
     for (antenna = 0u; antenna < 6u; ++antenna)
     {
+        uint8_t upper = (uint8_t)(antenna + 6u);
         device_info[LEGACY_DEVICE_INFO_ANT_RSSI_1_6_OFFSET + antenna] =
             m_latest_antenna_rssi[antenna];
         device_info[LEGACY_DEVICE_INFO_ANT_RSSI_7_12_OFFSET + antenna] =
-            m_latest_antenna_rssi[antenna + 6u];
+            m_latest_antenna_rssi[upper];
     }
     device_info[LEGACY_DEVICE_INFO_ACTIVE_ANTENNA_OFFSET] =
         (uint8_t)(rf1662_get_antenna() + 1u);
@@ -413,6 +449,8 @@ uint8_t receiver_scan_best_antenna(void)
     NRF_LOG_FLUSH();
 
     m_antenna_scan_active = true;
+    m_scan_end_pending = false;
+    m_scan_request_hold_until_ms = 0u;
     for (antenna = 0u; antenna < RF1662_ANTENNA_COUNT; ++antenna)
     {
         uint32_t total;
@@ -514,14 +552,21 @@ static void receiver_antenna_start_discovery(void)
     NRF_LOG_INFO("RF1662 mode=DISCOVERY ANT%u", (unsigned)(m_scan_antenna + 1u));
 }
 
-static void receiver_antenna_start_target_scan(void)
+static void receiver_antenna_start_target_scan(bool fast)
 {
+    m_fast_scan_active = fast;
+    m_scan_dwell_ms = fast ? RF1662_FAST_SCAN_DWELL_MS : RF1662_TARGET_SCAN_DWELL_MS;
+    m_scan_round_limit = fast ? RF1662_FAST_SCAN_ROUNDS : RF1662_TARGET_SCAN_ROUNDS;
     m_antenna_mode = ANTENNA_MODE_TARGET_SCAN;
     m_antenna_scan_active = true;
+    m_scan_end_pending = false;
+    m_scan_request_hold_until_ms = 0u;
     m_scan_antenna = 0u;
     m_scan_round = 0u;
     memset(m_scan_packet_count, 0, sizeof(m_scan_packet_count));
     memset(m_scan_rssi_sum, 0, sizeof(m_scan_rssi_sum));
+    memset((void *)m_latest_antenna_rssi, 0,
+           sizeof(m_latest_antenna_rssi));
     memset(m_candidate_antenna, 0, sizeof(m_candidate_antenna));
     m_candidate_count = 0u;
     m_candidate_index = 0u;
@@ -531,10 +576,10 @@ static void receiver_antenna_start_target_scan(void)
     memset(&m_receiver_queue, 0, sizeof(m_receiver_queue));
     memset(&g_legacy_image_rx, 0, sizeof(g_legacy_image_rx));
     receiver_antenna_switch(m_scan_antenna);
-    m_antenna_deadline_ms = m_antenna_time_ms + RF1662_TARGET_SCAN_DWELL_MS;
+    m_antenna_deadline_ms = m_antenna_time_ms + m_scan_dwell_ms;
     NRF_LOG_INFO("RF1662 mode=TARGET_SCAN dwell=%ums rounds=%u",
-                 (unsigned)RF1662_TARGET_SCAN_DWELL_MS,
-                 (unsigned)RF1662_TARGET_SCAN_ROUNDS);
+                 (unsigned)m_scan_dwell_ms,
+                 (unsigned)m_scan_round_limit);
 }
 
 /** @brief RTC2提供50ms状态机节拍，不在中断中切换射频通路。 */
@@ -573,18 +618,36 @@ void receiver_antenna_manager_init(void)
 
 void receiver_antenna_binding_changed(void)
 {
+    m_scan_end_pending = false;
+    m_scan_request_hold_until_ms = 0u;
     /* 新绑定不能沿用上一设备或发现阶段留下的天线质量。 */
     memset((void *)m_latest_antenna_rssi, 0,
            sizeof(m_latest_antenna_rssi));
     if (receiver_binding_is_bound())
     {
-        receiver_antenna_start_target_scan();
+        m_scan_request_pending = true;
+        m_scan_request_attempts = 0u;
+        m_fast_scan_start_pending = false;
+        receiver_antenna_start_target_scan(false);
     }
     else
     {
+        m_scan_request_pending = false;
+        m_fast_scan_start_pending = false;
         memset(m_last_capsule_sn, 0, sizeof(m_last_capsule_sn));
         m_last_capsule_sn_valid = false;
         receiver_antenna_start_discovery();
+    }
+}
+
+void receiver_antenna_fast_scan_granted(const uint8_t *sn)
+{
+    if (receiver_binding_is_bound() && m_scan_request_pending &&
+        receiver_binding_matches(sn))
+    {
+        m_scan_request_pending = false;
+        m_scan_request_attempts = 0u;
+        m_fast_scan_start_pending = true;
     }
 }
 
@@ -613,13 +676,43 @@ void receiver_antenna_note_discovery_sn(void)
     }
 }
 
-/** @brief 根据多轮目标包数量和平均RSSI生成前三名候选天线。 */
+/** @brief 比较扫描候选：足够样本优先，然后选平均RSSI更强的一路。 */
+static bool receiver_scan_candidate_is_better(uint8_t antenna, uint8_t old)
+{
+    uint32_t count = m_scan_packet_count[antenna];
+    uint32_t old_count = m_scan_packet_count[old];
+    uint32_t average = m_scan_rssi_sum[antenna] / count;
+    uint32_t old_average = m_scan_rssi_sum[old] / old_count;
+    bool reliable = count >= RF1662_MIN_RSSI_SAMPLES;
+    bool old_reliable = old_count >= RF1662_MIN_RSSI_SAMPLES;
+
+    if (reliable != old_reliable)
+    {
+        return reliable;
+    }
+    /* RSSISAMPLE是负dBm的幅值；数值越小，实际信号越强。 */
+    if (average != old_average)
+    {
+        return average < old_average;
+    }
+    return count > old_count;
+}
+
+/** @brief 根据多轮目标包的平均RSSI生成前三名候选天线。 */
 static void receiver_antenna_build_candidates(void)
 {
     uint8_t antenna;
     uint8_t position;
 
     m_candidate_count = 0u;
+    /* 扫描值保留到下次扫描；没有有效样本的通道明确记为0。 */
+    for (antenna = 0u; antenna < RF1662_ANTENNA_COUNT; ++antenna)
+    {
+        m_latest_antenna_rssi[antenna] =
+            (m_scan_packet_count[antenna] != 0u) ?
+            (uint8_t)(m_scan_rssi_sum[antenna] /
+                      m_scan_packet_count[antenna]) : 0u;
+    }
     for (antenna = 0u; antenna < RF1662_ANTENNA_COUNT; ++antenna)
     {
         if (m_scan_packet_count[antenna] == 0u)
@@ -629,13 +722,7 @@ static void receiver_antenna_build_candidates(void)
         for (position = 0u; position < m_candidate_count; ++position)
         {
             uint8_t old = m_candidate_antenna[position];
-            uint32_t new_avg = m_scan_rssi_sum[antenna] /
-                               m_scan_packet_count[antenna];
-            uint32_t old_avg = m_scan_rssi_sum[old] /
-                               m_scan_packet_count[old];
-            if ((m_scan_packet_count[antenna] > m_scan_packet_count[old]) ||
-                ((m_scan_packet_count[antenna] == m_scan_packet_count[old]) &&
-                 (new_avg < old_avg)))
+            if (receiver_scan_candidate_is_better(antenna, old))
             {
                 break;
             }
@@ -654,6 +741,15 @@ static void receiver_antenna_build_candidates(void)
                 ++m_candidate_count;
             }
         }
+    }
+    for (position = 0u; position < m_candidate_count; ++position)
+    {
+        antenna = m_candidate_antenna[position];
+        NRF_LOG_INFO("RF1662 candidate %u ANT%u packets=%u avg_rssi=-%u dBm",
+                     (unsigned)(position + 1u), (unsigned)(antenna + 1u),
+                     (unsigned)m_scan_packet_count[antenna],
+                     (unsigned)(m_scan_rssi_sum[antenna] /
+                                m_scan_packet_count[antenna]));
     }
 }
 
@@ -684,6 +780,32 @@ bool receiver_antenna_service(void)
     uint32_t now;
     uint32_t packet_count;
 
+    if (m_fast_scan_start_pending)
+    {
+        m_fast_scan_start_pending = false;
+        receiver_antenna_start_target_scan(true);
+        return true;
+    }
+    if (m_scan_end_pending)
+    {
+        uint8_t image_id = m_scan_end_frame_id;
+        m_scan_end_pending = false;
+        if (m_scan_request_pending && receiver_binding_is_bound())
+        {
+            if (m_scan_request_attempts < 2u)
+            {
+                receiver_send_fast_scan_request(image_id,
+                                                receiver_binding_get());
+                /* 停在捕获 END 的天线上，等待 TX 的开始通知。 */
+                m_scan_request_hold_until_ms = m_antenna_time_ms + 150u;
+            }
+            else
+            {
+                m_scan_request_pending = false;
+            }
+        }
+        return true;
+    }
     if (!m_antenna_service_due)
     {
         return false;
@@ -695,7 +817,7 @@ bool receiver_antenna_service(void)
     {
         if (receiver_binding_is_bound())
         {
-            receiver_antenna_start_target_scan();
+            receiver_antenna_start_target_scan(false);
         }
         else if ((int32_t)(now - m_antenna_deadline_ms) >= 0)
         {
@@ -716,6 +838,10 @@ bool receiver_antenna_service(void)
 
     if (m_antenna_mode == ANTENNA_MODE_TARGET_SCAN)
     {
+        if ((int32_t)(now - m_scan_request_hold_until_ms) < 0)
+        {
+            return false;
+        }
         if ((int32_t)(now - m_antenna_deadline_ms) < 0)
         {
             return false;
@@ -734,10 +860,10 @@ bool receiver_antenna_service(void)
             ++m_scan_round;
         }
 
-        if (m_scan_round < RF1662_TARGET_SCAN_ROUNDS)
+        if (m_scan_round < m_scan_round_limit)
         {
             receiver_antenna_switch(m_scan_antenna);
-            m_antenna_deadline_ms = now + RF1662_TARGET_SCAN_DWELL_MS;
+            m_antenna_deadline_ms = now + m_scan_dwell_ms;
         }
         else
         {
@@ -748,8 +874,8 @@ bool receiver_antenna_service(void)
             }
             else
             {
-                NRF_LOG_WARNING("RF1662 target not found; restarting fast scan");
-                receiver_antenna_start_target_scan();
+                NRF_LOG_WARNING("RF1662 target not found; restarting scan");
+                receiver_antenna_start_target_scan(false);
             }
         }
         return true;
@@ -770,8 +896,10 @@ bool receiver_antenna_service(void)
         }
         else
         {
-            NRF_LOG_WARNING("RF1662 candidates exhausted; restarting fast scan");
-            receiver_antenna_start_target_scan();
+            NRF_LOG_WARNING("RF1662 candidates exhausted; seeking image END");
+            m_scan_request_pending = true;
+            m_scan_request_attempts = 0u;
+            receiver_antenna_start_target_scan(false);
         }
         return true;
     }
@@ -810,12 +938,37 @@ bool receiver_forward_one(void)
  * 协议解析与转发
  * ============================================================ */
 
-/** @brief 向发送端发送两次原始协议图片接收完成应答。 */
+/** @brief 利用 END 后的接收窗口请求 TX 暂停图片并快速广播 SN。 */
+static void receiver_send_fast_scan_request(uint8_t image_id,
+                                            const uint8_t *capsule_sn)
+{
+    uint8_t request[RADIO_PACKET_SIZE] __ALIGNED(4) = {0};
+    request[0] = LEGACY_CMD_FAST_SCAN_REQUEST;
+    request[1] = image_id;
+    memcpy(&request[2], capsule_sn, LEGACY_CAPSULE_SN_SIZE);
+    ++m_scan_request_attempts;
+    receiver_send_control_packet(request, RADIO_PACKET_SIZE, 2u);
+    NRF_LOG_INFO("[SCAN] request sent for frame=%u attempt=%u",
+                 (unsigned)image_id, (unsigned)m_scan_request_attempts);
+}
+
+/** @brief 正常 ACK；待协商时使用该帧的应答窗口发送扫描请求。 */
 void receiver_send_image_ack(uint8_t image_id)
 {
     uint8_t response[RADIO_PACKET_SIZE] __ALIGNED(4) = {0};
     uint8_t  repeat;
     uint32_t wait_count;
+
+    if (m_scan_request_pending)
+    {
+        if (m_scan_request_attempts < 2u)
+        {
+            receiver_send_fast_scan_request(image_id,
+                                            g_legacy_image_rx.capsule_sn);
+            return;
+        }
+        m_scan_request_pending = false;
+    }
 
     response[0] = LEGACY_CMD_IMAGE_RECEIVED_RESPONSE;
     response[1] = image_id;
@@ -1079,6 +1232,21 @@ void receiver_process_legacy_packet(const uint8_t *packet)
                      (int)g_legacy_image_rx.accel_z_raw);
         return;
     }
+    if ((packet[0] == LEGACY_CMD_IMAGE_END) &&
+        m_scan_request_pending &&
+        (!g_legacy_image_rx.active ||
+         (packet[1] != g_legacy_image_rx.image_id)))
+    {
+        if (m_scan_request_attempts < 2u)
+        {
+            receiver_send_fast_scan_request(packet[1], &packet[2]);
+        }
+        else
+        {
+            m_scan_request_pending = false;
+        }
+        return;
+    }
     if (!g_legacy_image_rx.active ||
         (packet[1] != g_legacy_image_rx.image_id) ||
         (memcmp(&packet[2], g_legacy_image_rx.capsule_sn,
@@ -1114,6 +1282,10 @@ void receiver_process_legacy_packet(const uint8_t *packet)
             NRF_LOG_WARNING("Legacy image incomplete: id=%u received=%u/%u",
                             packet[1], (unsigned)g_legacy_image_rx.received_count,
                             (unsigned)g_legacy_image_rx.packet_count);
+            if (m_scan_request_pending)
+            {
+                receiver_send_image_ack(packet[1]);
+            }
             return;
         }
         for (index = 0u; index < g_legacy_image_rx.image_length; index++)

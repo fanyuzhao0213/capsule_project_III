@@ -79,6 +79,13 @@
 /** 绑定后快速交错扫描完整循环次数。 */
 #define RF1662_TARGET_SCAN_ROUNDS     5u
 
+/** 至少收到2个目标CRC正确包，才把平均RSSI视为可靠的选路依据。 */
+#define RF1662_MIN_RSSI_SAMPLES       2u
+
+/** 协商成功后的密集SN扫描：12路×30ms×4轮=1440ms。 */
+#define RF1662_FAST_SCAN_DWELL_MS     30u
+#define RF1662_FAST_SCAN_ROUNDS       4u
+
 /** 固定接收阶段的分级失联判断。 */
 #define RF1662_TARGET_PACKET_TIMEOUT_MS 1500u
 #define RF1662_COMPLETE_IMAGE_TIMEOUT_MS 4000u

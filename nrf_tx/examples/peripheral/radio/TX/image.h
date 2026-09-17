@@ -76,6 +76,9 @@ void image_ack_service(void);
 void capsule_sn_broadcast_service(void);
 void capsule_sn_broadcast_burst(uint8_t repeat_count);
 
+/** 只在收到RX扫描请求后运行的限时密集SN广播。 */
+void image_fast_scan_service(void);
+
 /** @brief 主循环中轮询并处理收到的 Radio 控制包。 */
 void radio_rx_process(void);
 

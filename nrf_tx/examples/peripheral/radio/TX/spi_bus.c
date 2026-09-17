@@ -58,6 +58,17 @@ void spi_bus_init(void)
                  (unsigned)CX_SPI_MISO_PIN, (unsigned)CX_SPI_CS_PIN);
 }
 
+void spi_bus_resume(void)
+{
+    NRF_SPIM0->ENABLE = SPIM_ENABLE_ENABLE_Enabled;
+}
+
+void spi_bus_suspend(void)
+{
+    NRF_SPIM0->TASKS_STOP = 1u;
+    NRF_SPIM0->ENABLE = SPIM_ENABLE_ENABLE_Disabled;
+}
+
 /**
  * @brief 执行一次SPI事务。
  *

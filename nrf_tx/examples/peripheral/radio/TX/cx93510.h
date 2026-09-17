@@ -24,6 +24,10 @@ typedef struct
  * @brief 初始化CX93510主机SPI、OV7676代理I2C、480x480 YUY2输入及JPEG编码器。
  */
 bool cx93510_init(uint8_t *revision);
+/** @brief 重新使能nRF侧SPIM0；CX93510帧RAM始终保持供电。 */
+void cx93510_host_resume(void);
+/** @brief 空闲时关闭nRF侧SPIM0，不改变P0.11帧RAM使能电平。 */
+void cx93510_host_suspend(void);
 /** @brief 通过CX93510内部I2C主机写一个OV7676的16位地址寄存器。 */
 bool cx93510_sensor_write(uint16_t address, uint8_t value);
 /** @brief 通过CX93510内部I2C主机读一个OV7676的16位地址寄存器。 */

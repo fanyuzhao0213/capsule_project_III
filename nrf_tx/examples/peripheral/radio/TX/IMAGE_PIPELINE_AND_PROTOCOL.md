@@ -68,13 +68,13 @@ STM32 USART2 RX=PA3
 - CS/HSS：P0.16。
 - SPI模式：Mode 0。
 - SPI频率：8 MHz。
-- PD_RAM：P0.11，高电平启用CX93510帧缓冲RAM。
+- PD_RAM：P0.11，高电平启用CX93510帧缓冲RAM；当前板运行期间始终保持高电平，禁止按旧板P0.18逻辑周期拉低。
 
 ### 4.2 OV7676和指示灯
 
 - OV7676 XSHUTDOWN：P0.06；先拉低复位/关断，再拉高进入工作状态。
-- 图像发送指示灯：P0.08，高电平点亮。
-- 开始发送一帧图像时点亮，配置块和JPEG块发送完成后熄灭。
+- 拍照补光灯：P0.08，高电平点亮。
+- 每帧唤醒传感器前点亮，图像进入CX93510帧缓冲后立即熄灭，发送阶段不持续点亮。
 
 ## 5. OV7676配置
 
@@ -115,6 +115,8 @@ OV7676不是直接连接到nRF的I2C外设，而是由nRF通过SPI操作CX93510�
 3. CX93510上电后的第一次SPI事务用于接口自动识别，随后再次读取器件信息。
 4. `SLAVE_SEL`低两位必须为`01`，表示已进入SPI从机模式。
 5. 读取`PN_BO_REV`确认器件和修订版本。
+
+正常运行时P0.11始终保持高电平，避免CX93510内部传感器I2C代理状态丢失。nRF侧SPIM0可在空闲时关闭，并在下一次拍照前重新使能；等待ACK期间帧RAM内容保持不变，以便ACK超时后重发。
 
 ### 6.2 OV7676代理I2C
 
@@ -248,10 +250,10 @@ JPEG分片 = ceil(15930 / 236) = 68包
 
 ## 11. 发送调度和宏配置
 
-图像发送参数位于摄像头角色的`main.c`顶部：
+图像发送参数集中在摄像头角色的`config.h`：
 
 ```c
-#define IMAGE_PERIOD_MS           300u
+#define IMAGE_PERIOD_MS           500u
 #define IMAGE_FRAGMENT_GAP_MS     1u
 #define IMAGE_REPEAT_SEND_ENABLED 0
 #define IMAGE_PASS_GAP_MS         20u

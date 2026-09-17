@@ -127,8 +127,10 @@ static bool receiver_application_service(void)
 {
     bool did_work = false;
 
-    did_work |= receiver_uart_process_received();
+    /* 扫描中捕获 END 后需赶在 TX 的 30ms 应答窗口内发请求。 */
+    did_work |= receiver_antenna_service();
     did_work |= receiver_forward_one();
+    did_work |= receiver_uart_process_received();
     did_work |= receiver_control_service();
     did_work |= receiver_uart_tx_service();
     did_work |= receiver_antenna_service();

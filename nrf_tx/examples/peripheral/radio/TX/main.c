@@ -193,6 +193,7 @@ static void application_init(void)
     watchdog_init();                                                            // ④ 启动异常恢复看门狗
     image_tx_led_init();                                                        // ⑤ 初始化补光灯/配置状态灯
     camera_init();                                                              // ⑥ 初始化图像链路并休眠OV7676
+    cx93510_host_suspend();                                                     //   空闲期仅关闭nRF侧SPIM0，P0.11保持高
     if (!adxl362_init())                                                        // ⑦ INT保持高阻，仅轮询读取
     {
         NRF_LOG_ERROR("[ADXL362] initialization failed");
@@ -293,6 +294,7 @@ static void application_run(void)
         }
         radio_rx_process();                                                     // ① 处理控制应答或图像ACK
         image_ack_service();                                                    // ② ACK超时后按协议重发
+        image_fast_scan_service();                                               // 仅在RX请求后限时暂停图像并密集广播SN
         capsule_sn_broadcast_service();                                         // ③ 按配置周期广播当前SN
 #if IMAGE_TRANSMISSION_ENABLED
         image_capture_task();                                                   // ④ 到期后唤醒摄像头并采集

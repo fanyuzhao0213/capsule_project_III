@@ -16,6 +16,12 @@
 /** @brief 初始化CX93510使用的8 MHz、Mode 0主机SPI。 */
 void spi_bus_init(void);
 
+/** @brief 重新使能已初始化的SPIM0，供CX93510活动阶段使用。 */
+void spi_bus_resume(void);
+
+/** @brief 关闭空闲SPIM0，降低CX93510掉电期间的外设功耗。 */
+void spi_bus_suspend(void);
+
 /**
  * @brief 在CS保持低电平期间完成一次全双工SPI传输。
  * @param tx 发送数据；为NULL时发送全0。
