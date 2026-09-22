@@ -1,6 +1,10 @@
 .\_build\main.o: ..\..\..\main.c
+.\_build\main.o: ..\..\..\antenna_manager.h
 .\_build\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdbool.h
 .\_build\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+.\_build\main.o: ..\..\..\config.h
+.\_build\main.o: ..\..\..\legacy_protocol.h
+.\_build\main.o: ..\..\..\rf1662.h
 .\_build\main.o: ..\..\..\..\..\..\..\components\libraries\util\app_error.h
 .\_build\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
 .\_build\main.o: ..\..\..\..\..\..\..\modules\nrfx\mdk\nrf.h
@@ -19,8 +23,7 @@
 .\_build\main.o: ..\..\..\..\..\..\..\components\drivers_nrf\nrf_soc_nosd\nrf_error.h
 .\_build\main.o: ..\..\..\..\..\..\..\components\libraries\util\nordic_common.h
 .\_build\main.o: ..\..\..\..\..\..\..\components\libraries\util\app_error_weak.h
-.\_build\main.o: ..\..\..\config.h
-.\_build\main.o: ..\..\..\legacy_protocol.h
+.\_build\main.o: ..\..\..\binding_storage.h
 .\_build\main.o: ..\..\..\image.h
 .\_build\main.o: ..\..\..\..\..\..\..\components\libraries\log\nrf_log.h
 .\_build\main.o: ..\..\..\..\..\..\..\components\libraries\util\sdk_common.h
@@ -45,6 +48,6 @@
 .\_build\main.o: ..\..\..\..\..\..\..\components\libraries\balloc\nrf_balloc.h
 .\_build\main.o: ..\..\..\..\..\..\..\components\libraries\util\app_util_platform.h
 .\_build\main.o: ..\..\..\..\..\..\..\components\libraries\log\nrf_log_default_backends.h
-.\_build\main.o: ..\..\..\rf1662.h
+.\_build\main.o: ..\..\..\radio_link.h
+.\_build\main.o: ..\..\..\receiver_timebase.h
 .\_build\main.o: ..\..\..\uart_bridge.h
-.\_build\main.o: ..\..\..\..\..\..\..\components\libraries\uart\app_uart.h

@@ -22,7 +22,7 @@
  * 0：不编译日志输出、不初始化日志后端、不执行日志刷新和后台处理。
  * 正式低功耗固件保持为0，联调时临时改为1。
  */
-#define TX_LOG_ENABLED              1u
+#define TX_LOG_ENABLED              0u
 
 /** 1：仅输出上电协议参数；不打开逐帧运行日志。 */
 #define TX_BOOT_LOG_ENABLED         1u
@@ -83,7 +83,7 @@
 #define RADIO_PACKET_SIZE        LEGACY_RADIO_PACKET_SIZE
 
 /** Radio 工作频率；nRF52832 FREQUENCY 寄存器保存相对 2400 MHz 的偏移。 */
-#define RADIO_FREQUENCY_MHZ      2410u
+#define RADIO_FREQUENCY_MHZ      2400u
 #define RADIO_FREQUENCY_OFFSET   (RADIO_FREQUENCY_MHZ - 2400u)
 
 /** Radio 接收控制包的队列深度。 */
@@ -104,7 +104,7 @@
 /** 当前联调阶段仅广播 SN，不采集、不发送图片；正式测试图片时改为 1。 */
 #define IMAGE_TRANSMISSION_ENABLED 1u
 
-/** 胶囊 SN 常态广播周期。 */
+/** 胶囊SN名义常态周期；当前仅用于启动日志，实际广播与图片共用IMAGE_PERIOD_MS的RTC2事件。 */
 #define SN_BROADCAST_PERIOD_MS   500u
 
 /** RX在图像ACK请求选路后，暂停图像并密集发送SN的最长时间。 */

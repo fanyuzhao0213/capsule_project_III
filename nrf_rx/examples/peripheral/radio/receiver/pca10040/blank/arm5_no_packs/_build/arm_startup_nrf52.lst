@@ -431,44 +431,46 @@ ARM Macro Assembler    Page 7
               00000000 
               00000000 
 Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M4.fp.sp --apcs=
-interwork --depend=.\_verify_build\arm_startup_nrf52.d -o.\_verify_build\arm_st
-artup_nrf52.o -I..\..\..\config -I..\..\..\..\..\..\..\components\toolchain\cms
-is\include -I..\..\..\..\..\..\..\components -I..\..\..\..\..\..\..\components\
-boards -I..\..\..\..\..\..\..\components\drivers_nrf\nrf_soc_nosd -I..\..\..\..
-\..\..\..\components\drivers_nrf\radio_config -I..\..\..\..\..\..\..\components
-\libraries\atomic -I..\..\..\..\..\..\..\components\libraries\atomic_fifo -I..\
-..\..\..\..\..\..\components\libraries\balloc -I..\..\..\..\..\..\..\components
-\libraries\bsp -I..\..\..\..\..\..\..\components\libraries\button -I..\..\..\..
-\..\..\..\components\libraries\delay -I..\..\..\..\..\..\..\components\librarie
-s\experimental_section_vars -I..\..\..\..\..\..\..\components\libraries\fifo -I
-..\..\..\..\..\..\..\components\libraries\log -I..\..\..\..\..\..\..\components
-\libraries\log\src -I..\..\..\..\..\..\..\components\libraries\memobj -I..\..\.
-.\..\..\..\..\components\libraries\ringbuf -I..\..\..\..\..\..\..\components\li
-braries\scheduler -I..\..\..\..\..\..\..\components\libraries\sortlist -I..\..\
-..\..\..\..\..\components\libraries\strerror -I..\..\..\..\..\..\..\components\
-libraries\timer -I..\..\..\..\..\..\..\components\libraries\uart -I..\..\..\..\
-..\..\..\components\libraries\util -I..\..\.. -I..\..\..\..\..\..\..\external\f
-printf -I..\..\..\..\..\..\..\external\segger_rtt -I..\..\..\..\..\..\..\integr
-ation\nrfx -I..\..\..\..\..\..\..\integration\nrfx\legacy -I..\..\..\..\..\..\.
-.\modules\nrfx -I..\..\..\..\..\..\..\modules\nrfx\drivers\include -I..\..\..\.
-.\..\..\..\modules\nrfx\hal -I..\..\..\..\..\..\..\modules\nrfx\mdk -I..\config
- -I.\RTE\_nrf_rx -IDevice\Include --predefine="__MICROLIB SETA 1" --predefine="
+interwork --depend=.\_build\arm_startup_nrf52.d -o.\_build\arm_startup_nrf52.o 
+-I..\..\..\config -I..\..\..\..\..\..\..\components\toolchain\cmsis\include -I.
+.\..\..\..\..\..\..\components -I..\..\..\..\..\..\..\components\boards -I..\..
+\..\..\..\..\..\components\drivers_nrf\nrf_soc_nosd -I..\..\..\..\..\..\..\comp
+onents\drivers_nrf\radio_config -I..\..\..\..\..\..\..\components\libraries\ato
+mic -I..\..\..\..\..\..\..\components\libraries\atomic_fifo -I..\..\..\..\..\..
+\..\components\libraries\balloc -I..\..\..\..\..\..\..\components\libraries\bsp
+ -I..\..\..\..\..\..\..\components\libraries\button -I..\..\..\..\..\..\..\comp
+onents\libraries\delay -I..\..\..\..\..\..\..\components\libraries\experimental
+_section_vars -I..\..\..\..\..\..\..\components\libraries\fifo -I..\..\..\..\..
+\..\..\components\libraries\log -I..\..\..\..\..\..\..\components\libraries\log
+\src -I..\..\..\..\..\..\..\components\libraries\memobj -I..\..\..\..\..\..\..\
+components\libraries\ringbuf -I..\..\..\..\..\..\..\components\libraries\schedu
+ler -I..\..\..\..\..\..\..\components\libraries\sortlist -I..\..\..\..\..\..\..
+\components\libraries\strerror -I..\..\..\..\..\..\..\components\libraries\time
+r -I..\..\..\..\..\..\..\components\libraries\uart -I..\..\..\..\..\..\..\compo
+nents\libraries\util -I..\..\.. -I..\..\..\..\..\..\..\external\fprintf -I..\..
+\..\..\..\..\..\external\segger_rtt -I..\..\..\..\..\..\..\integration\nrfx -I.
+.\..\..\..\..\..\..\integration\nrfx\legacy -I..\..\..\..\..\..\..\modules\nrfx
+ -I..\..\..\..\..\..\..\modules\nrfx\drivers\include -I..\..\..\..\..\..\..\mod
+ules\nrfx\hal -I..\..\..\..\..\..\..\modules\nrfx\mdk -I..\config -I.\RTE\_nrf_
+rx -IC:\Users\dell\AppData\Local\Arm\Packs\NordicSemiconductor\nRF_DeviceFamily
 
 
 
 ARM Macro Assembler    Page 8 
 
 
-__UVISION_VERSION SETA 536" --predefine="_RTE_ SETA 1" --predefine="_RTE_ SETA 
-1" --predefine="APP_TIMER_V2 SETA 1" --predefine="APP_TIMER_V2_RTC1_ENABLED SET
-A 1" --predefine="BOARD_PCA10040 SETA 1" --predefine="CONFIG_GPIO_AS_PINRESET S
-ETA 1" --predefine="FLOAT_ABI_HARD SETA 1" --predefine="NRF52 SETA 1" --predefi
-ne="NRF52832_XXAA SETA 1" --predefine="APP_ROLE_DEDICATED_RECEIVER SETA 1" --pr
-edefine="NRF52_PAN_74 SETA 1" --predefine="__HEAP_SIZE SETA 8192" --predefine="
-__STACK_SIZE SETA 8192" --cpreproc_opts=-DAPP_TIMER_V2,-DAPP_TIMER_V2_RTC1_ENAB
-LED,-DBOARD_PCA10040,-DCONFIG_GPIO_AS_PINRESET,-DFLOAT_ABI_HARD,-DNRF52,-DNRF52
-832_XXAA,-DNRF52_PAN_74,-D__HEAP_SIZE=8192,-D__STACK_SIZE=8192 --list=.\_build\
-arm_startup_nrf52.lst ..\..\..\..\..\..\..\modules\nrfx\mdk\arm_startup_nrf52.s
+Pack\8.44.1\Device\Include --predefine="__MICROLIB SETA 1" --predefine="__UVISI
+ON_VERSION SETA 536" --predefine="_RTE_ SETA 1" --predefine="NRF52832_XXAA SETA
+ 1" --predefine="_RTE_ SETA 1" --predefine="APP_TIMER_V2 SETA 1" --predefine="A
+PP_TIMER_V2_RTC1_ENABLED SETA 1" --predefine="BOARD_PCA10040 SETA 1" --predefin
+e="CONFIG_GPIO_AS_PINRESET SETA 1" --predefine="FLOAT_ABI_HARD SETA 1" --predef
+ine="NRF52 SETA 1" --predefine="NRF52832_XXAA SETA 1" --predefine="APP_ROLE_DED
+ICATED_RECEIVER SETA 1" --predefine="NRF52_PAN_74 SETA 1" --predefine="__HEAP_S
+IZE SETA 8192" --predefine="__STACK_SIZE SETA 8192" --cpreproc_opts=-DAPP_TIMER
+_V2,-DAPP_TIMER_V2_RTC1_ENABLED,-DBOARD_PCA10040,-DCONFIG_GPIO_AS_PINRESET,-DFL
+OAT_ABI_HARD,-DNRF52,-DNRF52832_XXAA,-DNRF52_PAN_74,-D__HEAP_SIZE=8192,-D__STAC
+K_SIZE=8192 --list=.\_build\arm_startup_nrf52.lst ..\..\..\..\..\..\..\modules\
+nrfx\mdk\arm_startup_nrf52.s
 
 
 

@@ -3,6 +3,8 @@
 .\_build\spi_bus.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdbool.h
 .\_build\spi_bus.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stddef.h
 .\_build\spi_bus.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+.\_build\spi_bus.o: ..\..\..\config.h
+.\_build\spi_bus.o: ..\..\..\legacy_protocol.h
 .\_build\spi_bus.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
 .\_build\spi_bus.o: ..\..\..\..\..\..\..\modules\nrfx\mdk\nrf.h
 .\_build\spi_bus.o: ..\..\..\..\..\..\..\modules\nrfx\mdk\nrf52.h
@@ -47,7 +49,6 @@
 .\_build\spi_bus.o: ..\..\..\..\..\..\..\components\libraries\util\sdk_os.h
 .\_build\spi_bus.o: ..\..\..\..\..\..\..\components\libraries\util\sdk_macros.h
 .\_build\spi_bus.o: ..\..\..\..\..\..\..\components\libraries\experimental_section_vars\nrf_section.h
-.\_build\spi_bus.o: ..\..\..\..\..\..\..\components\libraries\strerror\nrf_strerror.h
 .\_build\spi_bus.o: ..\..\..\..\..\..\..\components\libraries\log\src\nrf_log_internal.h
 .\_build\spi_bus.o: ..\..\..\..\..\..\..\components\drivers_nrf\nrf_soc_nosd\nrf_error.h
 .\_build\spi_bus.o: ..\..\..\..\..\..\..\components\libraries\log\nrf_log_instance.h

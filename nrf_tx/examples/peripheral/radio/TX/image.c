@@ -40,7 +40,7 @@ image_tx_t g_image_tx;
 /** 1 ms 系统时间戳。 */
 volatile uint32_t g_time_ms;
 
-/** 图像采集请求标志，由 TIMER1 周期置位。 */
+/** 图像采集请求标志，由RTC2每个图片周期置位，主循环清除。 */
 volatile bool g_capture_due;
 
 /** 胶囊 8 字节序列号，从 FICR DEVICEID 读取。 */
@@ -288,11 +288,15 @@ static bool radio_process_control_frame(const uint8_t *packet)
     uint16_t payload_length;
     uint16_t frame_length;
     capsule_sn_t requested_sn;
+
+    /* 只处理以“ZAYS”开头的控制帧，其他Radio包交还调用者继续识别。 */
     if ((packet[0] != 0x5Au) || (packet[1] != 0x41u) ||
         (packet[2] != 0x59u) || (packet[3] != 0x53u))
     {
         return false;
     }
+
+    /* 完整帧长度 = 7字节头 + payload + 1字节校验和。 */
     payload_length = LegacyProtocol_GetU16Be(&packet[5]);
     frame_length = (uint16_t)(payload_length + 8u);
     NRF_LOG_INFO("[CTRL] RADIO RX request: cmd=0x%02x data_len=%u frame_len=%u",
@@ -302,6 +306,8 @@ static bool radio_process_control_frame(const uint8_t *packet)
     NRF_LOG_HEXDUMP_INFO(packet,
                          (frame_length <= LEGACY_CONTROL_FRAME_MAX_SIZE) ?
                          frame_length : LEGACY_CONTROL_FRAME_MAX_SIZE);
+
+    /* 长度越界或校验和错误时，消费该控制帧但不执行命令。 */
     if ((frame_length > LEGACY_CONTROL_FRAME_MAX_SIZE) ||
         (control_checksum(&packet[7], payload_length) !=
          packet[frame_length - 1u]))
@@ -311,14 +317,14 @@ static bool radio_process_control_frame(const uint8_t *packet)
                         (unsigned)payload_length);
         return true;
     }
+
+    /* SN配置窗口关闭后拒绝新配置；已成功的重复0x46只重发0x47，避免重复写Flash。 */
     if (((packet[4] == LEGACY_CMD_SN_PREPARE_REQUEST) ||
          (packet[4] == LEGACY_CMD_DEVICE_ID_QUERY_REQUEST) ||
          (packet[4] == LEGACY_CMD_SN_SET_REQUEST) ||
          (packet[4] == LEGACY_CMD_SN_CONFIRM_REQUEST)) &&
         !m_sn_config_window_active)
     {
-        /* A repeated confirm can arrive because NRF_RX transmits each request
-         * three times. Keep the successful confirm idempotent. */
         if ((packet[4] == LEGACY_CMD_SN_CONFIRM_REQUEST) &&
             m_sn_config_complete)
         {
@@ -335,6 +341,8 @@ static bool radio_process_control_frame(const uint8_t *packet)
         }
         return true;
     }
+
+    /* 合法命令会刷新配置窗口活动时间，防止一组配置命令处理中途超时。 */
     if (((packet[4] == LEGACY_CMD_SN_PREPARE_REQUEST) &&
          (payload_length == 0u)) ||
         ((packet[4] == LEGACY_CMD_DEVICE_ID_QUERY_REQUEST) &&
@@ -348,14 +356,17 @@ static bool radio_process_control_frame(const uint8_t *packet)
         NRF_LOG_INFO("[SN CONFIG] valid cmd=0x%02x; inactivity timer reset",
                      (unsigned)packet[4]);
     }
+
+    /* 0x40：开始一次新的SN配置，清除之前未确认的暂存SN。 */
     if ((packet[4] == LEGACY_CMD_SN_PREPARE_REQUEST) &&
-             (payload_length == 0u))
+        (payload_length == 0u))
     {
         m_sn_update_pending = false;
         NRF_LOG_INFO("[CTRL] factory SN prepare accepted; pending cleared");
         radio_send_control_response(LEGACY_CMD_SN_PREPARE_RESPONSE,
                                     NULL, 0u);
     }
+    /* 0x42：读取并返回TX芯片的8字节DEVICEID。 */
     else if ((packet[4] == LEGACY_CMD_DEVICE_ID_QUERY_REQUEST) &&
              (payload_length == 0u))
     {
@@ -364,6 +375,7 @@ static bool radio_process_control_frame(const uint8_t *packet)
         radio_send_control_response(LEGACY_CMD_DEVICE_ID_QUERY_RESPONSE,
                                     (const uint8_t *)NRF_FICR->DEVICEID, 8u);
     }
+    /* 0x44：校验目标DEVICEID，匹配后只把新SN暂存在RAM中。 */
     else if ((packet[4] == LEGACY_CMD_SN_SET_REQUEST) &&
              (payload_length == 16u))
     {
@@ -388,6 +400,7 @@ static bool radio_process_control_frame(const uint8_t *packet)
                                         LEGACY_CAPSULE_SN_SIZE);
         }
     }
+    /* 0x46：把暂存SN写入Flash，回读生效后返回0x47。 */
     else if ((packet[4] == LEGACY_CMD_SN_CONFIRM_REQUEST) &&
              (payload_length == 0u))
     {
@@ -422,6 +435,7 @@ static bool radio_process_control_frame(const uint8_t *packet)
                                         NULL, 0u);
         }
     }
+    /* 未定义命令或payload长度不符合协议时统一返回控制错误。 */
     else
     {
         NRF_LOG_WARNING("[CTRL] unsupported command/length: cmd=0x%02x len=%u",
@@ -433,7 +447,7 @@ static bool radio_process_control_frame(const uint8_t *packet)
     return true;
 }
 
-/** @brief 主循环服务：链路空闲时按 SN_BROADCAST_PERIOD_MS 广播当前生效SN。 */
+/** @brief 主循环服务：RTC2置位广播请求后，在图像链路空闲时广播当前生效SN。 */
 void capsule_sn_broadcast_service(void)
 {
     if (m_fast_scan_active || g_image_tx.active || g_image_tx.awaiting_ack ||
@@ -452,37 +466,48 @@ void capsule_sn_broadcast_service(void)
 /** @brief 仅在RX请求后限时密集广播SN；超时自动恢复原图像周期。 */
 void image_fast_scan_service(void)
 {
-    uint32_t elapsed;
+    uint32_t elapsed;                                           // 本次快速扫描已经运行的时间
+
+    /* 未收到RX的快速扫描请求时不执行密集SN广播。 */
     if (!m_fast_scan_active)
     {
         return;
     }
+
     elapsed = (uint32_t)(g_time_ms - m_fast_scan_start_ms);
+
+    /* 扫描窗口到期后退出扫描模式，等待下一个RTC2周期重新采集图片。 */
     if (elapsed >= FAST_SCAN_DURATION_MS)
     {
-        m_fast_scan_active = false;
-        g_capture_due = false;
-        m_sn_broadcast_due = false;
+        m_fast_scan_active = false;                             // 结束快速扫描状态
+        g_capture_due = false;                                  // 丢弃扫描期间积累的图片采集请求
+        m_sn_broadcast_due = false;                             // 丢弃扫描期间积累的普通SN广播请求
         NRF_LOG_INFO("[SCAN] window complete; resume image schedule");
         return;
     }
+
+    /* 未到下一个8 ms广播时刻时立即返回，避免主循环连续无间隔发送。 */
     if ((int32_t)(g_time_ms - m_fast_scan_next_ms) < 0)
     {
         return;
     }
+
+    /* 前120 ms内每4次SN广播插入一次0x11，帮助RX快速确认扫描已经开始。 */
     if ((elapsed < 120u) && ((m_fast_scan_broadcast_count % 4u) == 0u))
     {
         memset(m_tx_packet, 0, sizeof(m_tx_packet));
-        m_tx_packet[0] = LEGACY_CMD_FAST_SCAN_START;
+        m_tx_packet[0] = LEGACY_CMD_FAST_SCAN_START;            // 0x11：快速扫描开始同步包
         memcpy(&m_tx_packet[1], g_capsule_sn, LEGACY_CAPSULE_SN_SIZE);
         radio_send_packet(m_tx_packet, false);
     }
+
+    /* 每个广播周期都发送0x05和当前8字节胶囊SN，供RX各天线采集RSSI。 */
     memset(m_tx_packet, 0, sizeof(m_tx_packet));
-    m_tx_packet[0] = LEGACY_CMD_CAPSULE_SN_BROADCAST;
+    m_tx_packet[0] = LEGACY_CMD_CAPSULE_SN_BROADCAST;           // 0x05：胶囊SN广播包
     memcpy(&m_tx_packet[1], g_capsule_sn, LEGACY_CAPSULE_SN_SIZE);
     radio_send_packet(m_tx_packet, false);
-    ++m_fast_scan_broadcast_count;
-    m_fast_scan_next_ms = g_time_ms + FAST_SCAN_SN_PERIOD_MS;
+    ++m_fast_scan_broadcast_count;                              // 记录本次扫描已经发送的SN广播数量
+    m_fast_scan_next_ms = g_time_ms + FAST_SCAN_SN_PERIOD_MS;   // 安排下一次密集广播时间，当前配置为8 ms后
 }
 
 /** @brief 配置成功后立即连续广播指定次数的当前SN。 */
@@ -727,11 +752,12 @@ void image_low_power_scheduler_init(void)
 
 bool image_runtime_busy(void)
 {
-    return m_fast_scan_active || m_sn_broadcast_due ||
-           g_capture_due ||
-           (m_capture_prep_state != CAPTURE_PREP_IDLE) ||
-           g_image_tx.active ||
-           g_image_tx.awaiting_ack;
+    return m_fast_scan_active ||                                // RX已请求天线扫描，TX正在快速广播SN
+           m_sn_broadcast_due ||                                // RTC2已产生普通SN广播请求，等待主循环发送
+           g_capture_due ||                                     // RTC2已产生图片采集请求，等待启动摄像头
+           (m_capture_prep_state != CAPTURE_PREP_IDLE) ||       // 摄像头、补光灯和加速度计正在预热，等待正式采集
+           g_image_tx.active ||                                 // 当前图片仍有BEGIN、DATA或END包需要发送
+           g_image_tx.awaiting_ack;                             // END已发送，Radio正在等待RX返回图片ACK或扫描请求
 }
 
 
@@ -795,8 +821,8 @@ void image_capture_task(void)
         capture_ok = cx93510_capture_one(&g_image_tx.frame,                     // ④ 紧接着触发采集，使姿态与本帧曝光时刻对应
                                          IMAGE_CAPTURE_TIMEOUT_MS);
         image_tx_led_set(false);                                                // ④ 图像已进入CX93510帧缓冲，立即关闭补光灯
-        (void)ov7676_sleep();                                                    // ⑤ 传感器进入软件休眠，发送阶段不再持续工作
-        m_capture_prep_state = CAPTURE_PREP_IDLE;
+        (void)ov7676_sleep();                                                   // ⑤ 传感器进入软件休眠，发送阶段不再持续工作
+        m_capture_prep_state = CAPTURE_PREP_IDLE;                               // 采集准备状态恢复为空闲。
         if (!capture_ok)
         {
             cx93510_host_suspend();
@@ -815,7 +841,7 @@ void image_capture_task(void)
             return;
         }
 
-        cx93510_host_resume();                                                    // ⑧ 拍照前恢复nRF侧SPIM0，P0.11始终为高
+        cx93510_host_resume();                                                   // ⑧ 拍照前恢复nRF侧SPIM0，P0.11始终为高
         image_tx_led_set(true);                                                  // ⑧ 先开补光灯，使传感器从唤醒起就看到正式光源
         if (!adxl362_measurement_start())                                        // ⑨ 同期启动100Hz测量，预热25ms后可取得新样本
         {
@@ -823,11 +849,11 @@ void image_capture_task(void)
         }
         if (!ov7676_wakeup())                                                     // ⑨ 恢复OV7676连续视频输出
         {
-            (void)adxl362_standby();
-            image_tx_led_set(false);
-            (void)ov7676_sleep();
-            cx93510_host_suspend();
-            return;
+            (void)adxl362_standby();      	// 加速度计重新待机。
+            image_tx_led_set(false);       	// 关闭补光灯
+            (void)ov7676_sleep();           // 摄像头重新休眠
+            cx93510_host_suspend();      	// 关闭CX93510主机SPI
+            return;                     	// 放弃本次采集
         }
         m_capture_warmup_deadline_ms = g_time_ms +
                                        IMAGE_CAPTURE_LIGHT_WARMUP_MS;            // ⑩ 非阻塞等待约1帧，沿用旧工程稳定时序
@@ -929,6 +955,7 @@ void image_tx_service(void)
     if (g_image_tx.block_sent == g_image_tx.block_size)                       // ⑬ 本块全部发送完成
     {
         ++g_image_tx.block_pass_index;                                        //   已发遍数 +1
+		/* 目前不需要用到 影响通信效率*/
         if (g_image_tx.block_pass_index < IMAGE_BLOCK_PASSES)                 // ⑭ 重复发送模式：还要再发一遍
         {
             g_image_tx.fragment_index = 0u;                                   //   分片号和已发字节清零，重新从 0 开始

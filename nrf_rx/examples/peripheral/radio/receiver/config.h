@@ -40,7 +40,7 @@
 #define RADIO_PACKET_SIZE        LEGACY_RADIO_PACKET_SIZE
 
 /** Radio 工作频率；必须与 TX 保持一致。 */
-#define RADIO_FREQUENCY_MHZ      2410u
+#define RADIO_FREQUENCY_MHZ      2400u
 #define RADIO_FREQUENCY_OFFSET   (RADIO_FREQUENCY_MHZ - 2400u)
 
 /** Radio 接收队列深度。 */
@@ -73,11 +73,11 @@
 /** 发现SN后继续驻留当前天线，保证STM32能收到重复广播。 */
 #define RF1662_DISCOVERY_FOUND_HOLD_MS 1500u
 
-/** 绑定目标选优时每根天线的采样时间。 */
-#define RF1662_TARGET_SCAN_DWELL_MS   8u
+/** 协商前寻找目标图片END时，每根天线的驻留时间。 */
+#define RF1662_SEEK_END_DWELL_MS      8u
 
-/** 绑定后快速交错扫描完整循环次数。 */
-#define RF1662_TARGET_SCAN_ROUNDS     5u
+/** 寻找END每批循环轮数；一批结束后仍未找到则继续下一批。 */
+#define RF1662_SEEK_END_ROUNDS        5u
 
 /** 至少收到2个目标CRC正确包，才把平均RSSI视为可靠的选路依据。 */
 #define RF1662_MIN_RSSI_SAMPLES       2u
@@ -136,8 +136,8 @@
 /** UART 单包最大字节数。 */
 #define UART_RX_PACKET_MAX_SIZE  1024u
 
-/** TIMER2（UART 静默定时器）中断优先级。 */
-#define UART_IDLE_TIMER_IRQ_PRIORITY 7u
+/** TIMER1统一时间基中断优先级；只更新时间与到期标志。 */
+#define RX_TIMEBASE_IRQ_PRIORITY  7u
 
 /** 接收板外部模式控制脚：接收期间保持低电平，发送 ACK 时短暂拉高。 */
 #define RECEIVER_MODE_PIN        23u

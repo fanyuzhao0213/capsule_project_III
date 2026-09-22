@@ -49,7 +49,7 @@ extern image_tx_t g_image_tx;
 /** @brief 活动阶段时间戳，单位 ms，由 TIMER1_IRQHandler 累加。 */
 extern volatile uint32_t g_time_ms;
 
-/** @brief 图像采集请求标志，由 TIMER1 周期置位，主循环清除。 */
+/** @brief 图像采集请求标志，由RTC2每个图片周期置位，主循环清除。 */
 extern volatile bool g_capture_due;
 
 /** @brief 胶囊8字节序列号镜像，由capsule_sn_init在启动和SN重设后同步。 */
@@ -72,7 +72,7 @@ void image_tx_service(void);
 /** @brief 处理图像 ACK 超时，并按原始协议重发 DATA 与 END。 */
 void image_ack_service(void);
 
-/** 按 SN_BROADCAST_PERIOD_MS 广播当前生效胶囊 SN（图像链路空闲时）。 */
+/** RTC2置位广播请求后，在图像链路空闲时广播当前生效胶囊SN。 */
 void capsule_sn_broadcast_service(void);
 void capsule_sn_broadcast_burst(uint8_t repeat_count);
 

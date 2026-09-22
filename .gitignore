@@ -1,8 +1,18 @@
 # IDE/build output
 **/_build/
 **/_verify_build/
+**/debug/
+**/obj_debug/
+**/codex_obj/
+**/Objects/
+**/Listings/
 **/JLinkLog.txt
 **/*.uvguix.*
+**/*.o
+**/*.d
+**/*.crf
+**/*.axf
+**/*.map
 **/__pycache__/
 *.pyc
 

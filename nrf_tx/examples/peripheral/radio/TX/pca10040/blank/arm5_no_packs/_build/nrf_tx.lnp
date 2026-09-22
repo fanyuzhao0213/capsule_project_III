@@ -1,9 +1,11 @@
 --cpu=Cortex-M4.fp.sp
 ".\_build\main.o"
 ".\_build\spi_bus.o"
+".\_build\dev_adxl362.o"
 ".\_build\cx93510.o"
 ".\_build\ov7676.o"
 ".\_build\image.o"
+".\_build\tx_runtime_log.o"
 ".\_build\capsule_sn_storage.o"
 ".\_build\drv_flash.o"
 ".\_build\arm_startup_nrf52.o"

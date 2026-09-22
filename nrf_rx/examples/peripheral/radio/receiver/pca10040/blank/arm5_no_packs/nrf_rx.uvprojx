@@ -413,6 +413,21 @@
               <FileType>1</FileType>
               <FilePath>..\..\..\rf1662.c</FilePath>
             </File>
+            <File>
+              <FileName>receiver_timebase.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\receiver_timebase.c</FilePath>
+            </File>
+            <File>
+              <FileName>radio_link.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\radio_link.c</FilePath>
+            </File>
+            <File>
+              <FileName>antenna_manager.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\antenna_manager.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

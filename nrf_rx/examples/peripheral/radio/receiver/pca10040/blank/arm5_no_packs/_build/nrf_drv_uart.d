@@ -39,5 +39,5 @@
 .\_build\nrf_drv_uart.o: ..\..\..\..\..\..\..\modules\nrfx\nrfx.h
 .\_build\nrf_drv_uart.o: ..\..\..\..\..\..\..\components\libraries\util\sdk_resources.h
 .\_build\nrf_drv_uart.o: ..\..\..\..\..\..\..\modules\nrfx\drivers/nrfx_errors.h
-.\_build\nrf_drv_uart.o: ..\..\..\..\..\..\..\modules\nrfx\drivers\include\nrfx_uart.h
-.\_build\nrf_drv_uart.o: ..\..\..\..\..\..\..\modules\nrfx\hal/nrf_uart.h
+.\_build\nrf_drv_uart.o: ..\..\..\..\..\..\..\modules\nrfx\drivers\include\nrfx_uarte.h
+.\_build\nrf_drv_uart.o: ..\..\..\..\..\..\..\modules\nrfx\hal/nrf_uarte.h

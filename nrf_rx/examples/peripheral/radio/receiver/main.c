@@ -1,157 +1,103 @@
 /**
  * @file main.c
- * @brief nRF52832 专用接收板程序入口（仅 LEGACY 协议）
- *
- * 本文件仅负责启动顺序与主循环，图像接收、协议解析、UART 桥接
- * 等业务代码已剥离到 image.c 和 uart_bridge.c 中。
- *
- * 数据链路：摄像头发送板 -> Radio -> 环形队列 -> LEGACY 协议解析
- *         -> 1 Mbps UART -> STM32 主控 -> PC。
+ * @brief RX启动入口和非阻塞任务调度。
  */
 
-#include <stdbool.h>
-#include <stdint.h>
+#include "antenna_manager.h"
 #include "app_error.h"
 #include "binding_storage.h"
 #include "config.h"
 #include "image.h"
-#include "legacy_protocol.h"
 #include "nrf.h"
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
+#include "radio_link.h"
+#include "receiver_timebase.h"
 #include "rf1662.h"
 #include "uart_bridge.h"
 
-
-#if UART_BRIDGE_STARTUP_TEST
-/** 上电后发给STM32的一次性UART连通性测试字符串。 */
-static const uint8_t m_uart_startup_test[] =
-    "\r\nNRF52832 UART READY 1000000 8N1\r\n";
-#endif
-
-
-/* ============================================================
- * 应用初始化
- * ============================================================ */
-
-/** @brief 初始化RTT日志前端和默认后端，并输出当前固件角色。 */
+/** @brief 初始化日志前端和已启用的RTT后端。 */
 static void receiver_log_init(void)
 {
-    uint32_t error;
-
-    error = NRF_LOG_INIT(NULL);
+    uint32_t error = NRF_LOG_INIT(NULL);
     APP_ERROR_CHECK(error);
     NRF_LOG_DEFAULT_BACKENDS_INIT();
-    NRF_LOG_INFO("Role: dedicated Radio-to-UART receiver (LEGACY protocol)");
 }
 
-/** @brief 初始化上电即清空的RX绑定状态。 */
-static void receiver_binding_state_init(void)
-{
-    receiver_binding_init();
-    NRF_LOG_INFO("Binding state: unbound after power-on/reset (RAM only)");
-}
-
-/** @brief 初始化12路天线开关；配置非法时记录日志并停止启动。 */
+/** @brief 初始化RF1662，并默认接通配置指定的天线。 */
 static void receiver_rf_frontend_init(void)
 {
     if (!rf1662_init(RF1662_DEFAULT_ANTENNA))
     {
-        NRF_LOG_ERROR("RF1662 invalid antenna index: %u",
-                      (unsigned)RF1662_DEFAULT_ANTENNA);
-        NRF_LOG_FLUSH();
         APP_ERROR_HANDLER(NRF_ERROR_INVALID_PARAM);
     }
-
-    NRF_LOG_INFO("RF1662 ready: SCLK=P0.%02u SDATA=P0.%02u antenna=ANT%u",
-                 (unsigned)RF1662_SCLK_PIN,
-                 (unsigned)RF1662_SDATA_PIN,
-                 (unsigned)(rf1662_get_antenna() + 1u));
 }
 
-/** @brief 初始化与STM32连接的UART、包间静默定时器和收发模式控制脚。 */
-static void receiver_uart_link_init(void)
-{
-    receiver_mode_pin_init();
-    receiver_uart_idle_timer_init();
-    receiver_uart_init();
-}
-
-/** @brief 初始化Radio接收和非阻塞12路天线管理器。 */
-static void receiver_radio_link_init(void)
-{
-    receiver_radio_init();
-    receiver_antenna_manager_init();
-}
-
-/**
- * @brief 按依赖顺序完成RX应用初始化。
- * @note 高频时钟必须先于Radio；RF前端和模式脚必须先于Radio收发。
- */
+/** @brief 按硬件依赖关系初始化各模块。 */
 static void receiver_application_init(void)
 {
-    receiver_clock_init();                     // 1 时钟初始化
-    receiver_log_init();                       // 2 日志初始化
-    receiver_binding_state_init();             // 3 绑定初始化
-    receiver_rf_frontend_init();               // 4 12路天线开关初始化
-    receiver_uart_link_init();                 // 5 uart初始化
-    receiver_radio_link_init();
-    NRF_LOG_INFO("[BOOT] RX firmware=%u.%u.%u device_id:",
+    /* 先准备基础硬件，再启动可能产生中断的UART、Radio和天线状态机。 */
+    receiver_clock_init();
+    receiver_log_init();
+    receiver_binding_init();
+    receiver_image_init();
+    receiver_rf_frontend_init();
+    receiver_mode_pin_init();
+    receiver_timebase_init();
+    receiver_uart_idle_capture_init();
+    receiver_uart_init();
+    receiver_radio_init();
+    receiver_antenna_init();
+
+    NRF_LOG_INFO("RX ready: firmware=%u.%u.%u radio=%uMHz",
                  (unsigned)VERSION_MAIN, (unsigned)VERSION_SUB,
-                 (unsigned)VERSION_TEST);
+                 (unsigned)VERSION_TEST, (unsigned)RADIO_FREQUENCY_MHZ);
+    NRF_LOG_INFO("[BOOT] packet=%u bytes UART=1Mbps default=ANT%u",
+                 (unsigned)RADIO_PACKET_SIZE,
+                 (unsigned)(RF1662_DEFAULT_ANTENNA + 1u));
+    NRF_LOG_INFO("[BOOT] seek=%ums x%u fast_scan=%ums x%u",
+                 (unsigned)RF1662_SEEK_END_DWELL_MS,
+                 (unsigned)RF1662_SEEK_END_ROUNDS,
+                 (unsigned)RF1662_FAST_SCAN_DWELL_MS,
+                 (unsigned)RF1662_FAST_SCAN_ROUNDS);
+    NRF_LOG_INFO("[BOOT] RX device ID:");
     NRF_LOG_HEXDUMP_INFO((const uint8_t *)NRF_FICR->DEVICEID, 8u);
-    NRF_LOG_INFO("[BOOT] radio=%uMHz mode=2M packet=%u ACK_power=-8dBm",
-                 (unsigned)RADIO_FREQUENCY_MHZ,
-                 (unsigned)RADIO_PACKET_SIZE);
-    NRF_LOG_INFO("[BOOT] UART->STM=1Mbps TX=P0.%02u RX=P0.%02u DMA_chunk=%u",
-                 (unsigned)UART_TX_PIN, (unsigned)UART_RX_PIN,
-                 (unsigned)UART_TX_DMA_CHUNK_SIZE);
-    NRF_LOG_INFO("[BOOT] antenna_count=%u default=ANT%u discovery_dwell=%ums",
-                 (unsigned)RF1662_ANTENNA_COUNT,
-                 (unsigned)(RF1662_DEFAULT_ANTENNA + 1u),
-                 (unsigned)RF1662_DISCOVERY_DWELL_MS);
-    NRF_LOG_FLUSH();
 }
 
-
-/* ============================================================
- * 主循环服务
- * ============================================================ */
-
 /**
- * @brief 执行一轮非阻塞通信服务。
- * @return true表示本轮处理了UART、Radio、控制事务或UART发送工作。
+ * @brief 执行一轮主循环任务。
+ *
+ * 顺序保证：先处理Radio紧急事件，再处理业务包和STM控制，最后推进
+ * 天线定时状态；每个任务单次工作量有限，不长时间占用主循环。
  */
-static bool receiver_application_service(void)
+static bool receiver_application_run_once(void)
 {
-    bool did_work = false;
+    bool worked = false;
 
-    /* 扫描中捕获 END 后需赶在 TX 的 30ms 应答窗口内发请求。 */
-    did_work |= receiver_antenna_service();
-    did_work |= receiver_forward_one();
-    did_work |= receiver_uart_process_received();
-    did_work |= receiver_control_service();
-    did_work |= receiver_uart_tx_service();
-    did_work |= receiver_antenna_service();
-    return did_work;
+    worked |= receiver_antenna_service_events();  // 处理END和0x11事件
+    worked |= receiver_radio_process_one();       // 解析一个无线业务包
+    worked |= receiver_uart_rx_service();         // 解析STM32控制命令
+    worked |= receiver_uart_control_service();    // 补发短控制应答
+    worked |= receiver_uart_tx_service();         // 启动一个图片DMA块
+    worked |= receiver_antenna_service_events();  // 处理本轮新事件
+    worked |= receiver_antenna_service_schedule();// 推进扫描或失联切换
+
+    return worked;
 }
 
-
-/**
- * @brief NRF_RX程序入口：初始化绑定、12路天线、UART和Radio并运行桥接循环。
- * @return 嵌入式主循环不会退出，返回值仅满足C语言入口约定。
- */
+/** @brief RX程序入口，持续执行非阻塞任务并在空闲时等待中断。 */
 int main(void)
 {
     receiver_application_init();
 
     while (true)
     {
-        bool did_work = receiver_application_service();
-        bool log_work = NRF_LOG_PROCESS();
+        /* 所有业务均为短任务；本轮无任务和日志时才等待下一次中断。 */
+        bool worked = receiver_application_run_once();
+        bool log_worked = NRF_LOG_PROCESS();
 
-        if (!did_work && !log_work)
+        if (!worked && !log_worked)
         {
             __WFE();
         }

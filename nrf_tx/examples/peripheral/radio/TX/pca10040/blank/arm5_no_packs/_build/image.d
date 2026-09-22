@@ -7,6 +7,9 @@
 .\_build\image.o: ..\..\..\legacy_protocol.h
 .\_build\image.o: ..\..\..\capsule_sn_storage.h
 .\_build\image.o: ..\..\..\config.h
+.\_build\image.o: ..\..\..\dev_adxl362.h
+.\_build\image.o: ..\..\..\ov7676.h
+.\_build\image.o: ..\..\..\tx_runtime_log.h
 .\_build\image.o: ..\..\..\..\..\..\..\modules\nrfx\mdk\nrf.h
 .\_build\image.o: ..\..\..\..\..\..\..\modules\nrfx\mdk\nrf52.h
 .\_build\image.o: ..\..\..\..\..\..\..\components\toolchain\cmsis\include\core_cm4.h
@@ -50,7 +53,6 @@
 .\_build\image.o: ..\..\..\..\..\..\..\components\libraries\util\sdk_os.h
 .\_build\image.o: ..\..\..\..\..\..\..\components\libraries\util\sdk_macros.h
 .\_build\image.o: ..\..\..\..\..\..\..\components\libraries\experimental_section_vars\nrf_section.h
-.\_build\image.o: ..\..\..\..\..\..\..\components\libraries\strerror\nrf_strerror.h
 .\_build\image.o: ..\..\..\..\..\..\..\components\libraries\log\src\nrf_log_internal.h
 .\_build\image.o: ..\..\..\..\..\..\..\components\drivers_nrf\nrf_soc_nosd\nrf_error.h
 .\_build\image.o: ..\..\..\..\..\..\..\components\libraries\log\nrf_log_instance.h

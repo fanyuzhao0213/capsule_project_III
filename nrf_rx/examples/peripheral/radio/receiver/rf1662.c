@@ -36,8 +36,12 @@ static const uint8_t m_antenna_codes[RF1662_ANTENNA_COUNT] =
     0x0Cu, 0x08u, 0x03u, 0x05u
 };
 
-/** 当前天线下标。 */
-static uint8_t m_current_antenna;
+typedef struct
+{
+    uint8_t current_antenna;
+} rf1662_state_t;
+
+static rf1662_state_t m_rf1662;
 
 /** @brief 初始化串行控制 GPIO。 */
 static void rf1662_gpio_init(void)
@@ -178,6 +182,7 @@ static void rf1662_write_register(uint16_t address, uint8_t data)
     rf1662_stop();
 }
 
+/** @brief 将0~11的软件天线序号转换为芯片编码并立即切换。 */
 bool rf1662_select_antenna(uint8_t antenna_index)
 {
     if (antenna_index >= RF1662_ANTENNA_COUNT)
@@ -185,14 +190,16 @@ bool rf1662_select_antenna(uint8_t antenna_index)
         return false;
     }
 
+    /* 编码表来自旧工程实测结果，不能用天线序号直接写寄存器。 */
     rf1662_start();
     rf1662_write_register_zero(RF1662_SLAVE_ADDRESS,
                                m_antenna_codes[antenna_index]);
     rf1662_stop();
-    m_current_antenna = antenna_index;
+    m_rf1662.current_antenna = antenna_index;
     return true;
 }
 
+/** @brief 按旧工程验证时序启动RF1662，并选择初始天线。 */
 bool rf1662_init(uint8_t antenna_index)
 {
     if (antenna_index >= RF1662_ANTENNA_COUNT)
@@ -216,7 +223,8 @@ bool rf1662_init(uint8_t antenna_index)
     return rf1662_select_antenna(antenna_index);
 }
 
+/** @brief 返回当前软件天线序号，0表示ANT1，11表示ANT12。 */
 uint8_t rf1662_get_antenna(void)
 {
-    return m_current_antenna;
+    return m_rf1662.current_antenna;
 }

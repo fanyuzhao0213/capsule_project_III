@@ -46,5 +46,5 @@
 .\_build\app_uart_fifo.o: ..\..\..\..\..\..\..\modules\nrfx\nrfx.h
 .\_build\app_uart_fifo.o: ..\..\..\..\..\..\..\components\libraries\util\sdk_resources.h
 .\_build\app_uart_fifo.o: ..\..\..\..\..\..\..\modules\nrfx\drivers/nrfx_errors.h
-.\_build\app_uart_fifo.o: ..\..\..\..\..\..\..\modules\nrfx\drivers\include\nrfx_uart.h
-.\_build\app_uart_fifo.o: ..\..\..\..\..\..\..\modules\nrfx\hal/nrf_uart.h
+.\_build\app_uart_fifo.o: ..\..\..\..\..\..\..\modules\nrfx\drivers\include\nrfx_uarte.h
+.\_build\app_uart_fifo.o: ..\..\..\..\..\..\..\modules\nrfx\hal/nrf_uarte.h

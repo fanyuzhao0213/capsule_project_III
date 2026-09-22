@@ -19,11 +19,11 @@
 .\_build\main.o: ..\..\..\..\..\..\..\components\drivers_nrf\nrf_soc_nosd\nrf_error.h
 .\_build\main.o: ..\..\..\..\..\..\..\components\libraries\util\nordic_common.h
 .\_build\main.o: ..\..\..\..\..\..\..\components\libraries\util\app_error_weak.h
-.\_build\main.o: ..\..\..\capsule_sn_storage.h
-.\_build\main.o: ..\..\..\legacy_protocol.h
 .\_build\main.o: ..\..\..\config.h
+.\_build\main.o: ..\..\..\legacy_protocol.h
 .\_build\main.o: ..\..\..\cx93510.h
 .\_build\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stddef.h
+.\_build\main.o: ..\..\..\dev_adxl362.h
 .\_build\main.o: ..\..\..\image.h
 .\_build\main.o: ..\..\..\..\..\..\..\components\libraries\log\nrf_log.h
 .\_build\main.o: ..\..\..\..\..\..\..\components\libraries\util\sdk_common.h
@@ -34,7 +34,6 @@
 .\_build\main.o: ..\..\..\..\..\..\..\components\libraries\util\sdk_macros.h
 .\_build\main.o: ..\..\..\..\..\..\..\components\libraries\util\nrf_assert.h
 .\_build\main.o: ..\..\..\..\..\..\..\components\libraries\experimental_section_vars\nrf_section.h
-.\_build\main.o: ..\..\..\..\..\..\..\components\libraries\strerror\nrf_strerror.h
 .\_build\main.o: ..\..\..\..\..\..\..\components\libraries\log\src\nrf_log_internal.h
 .\_build\main.o: ..\..\..\..\..\..\..\components\drivers_nrf\nrf_soc_nosd\nrf_error.h
 .\_build\main.o: ..\..\..\..\..\..\..\components\libraries\log\nrf_log_instance.h
@@ -42,9 +41,5 @@
 .\_build\main.o: ..\..\..\..\..\..\..\components\libraries\log\nrf_log_ctrl.h
 .\_build\main.o: ..\..\..\..\..\..\..\components\libraries\log\src\nrf_log_ctrl_internal.h
 .\_build\main.o: ..\..\..\..\..\..\..\components\libraries\log\nrf_log_backend_interface.h
-.\_build\main.o: ..\..\..\..\..\..\..\components\libraries\memobj\nrf_memobj.h
-.\_build\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdlib.h
-.\_build\main.o: ..\..\..\..\..\..\..\components\libraries\balloc\nrf_balloc.h
-.\_build\main.o: ..\..\..\..\..\..\..\components\libraries\util\app_util_platform.h
 .\_build\main.o: ..\..\..\..\..\..\..\components\libraries\log\nrf_log_default_backends.h
 .\_build\main.o: ..\..\..\ov7676.h

@@ -30,7 +30,6 @@
 .\_build\capsule_sn_storage.o: ..\..\..\..\..\..\..\components\libraries\util\sdk_macros.h
 .\_build\capsule_sn_storage.o: ..\..\..\..\..\..\..\components\libraries\util\nrf_assert.h
 .\_build\capsule_sn_storage.o: ..\..\..\..\..\..\..\components\libraries\experimental_section_vars\nrf_section.h
-.\_build\capsule_sn_storage.o: ..\..\..\..\..\..\..\components\libraries\strerror\nrf_strerror.h
 .\_build\capsule_sn_storage.o: ..\..\..\..\..\..\..\components\libraries\log\src\nrf_log_internal.h
 .\_build\capsule_sn_storage.o: ..\..\..\..\..\..\..\components\drivers_nrf\nrf_soc_nosd\nrf_error.h
 .\_build\capsule_sn_storage.o: ..\..\..\..\..\..\..\components\libraries\log\nrf_log_instance.h

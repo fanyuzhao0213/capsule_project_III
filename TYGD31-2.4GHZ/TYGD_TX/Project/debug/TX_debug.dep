@@ -1,398 +1,0 @@
-Dependencies for Project 'TX', Target 'debug': (DO NOT MODIFY !)
-F (..\nRF\core\arm_startup_nrf52.s)(0x5A4AE20E)(--cpu Cortex-M4.fp -g --apcs=interwork --pd "__MICROLIB SETA 1"-I F:\work20200312\chengxu\TYGD31-2.4GHZ\TYGD_TX\Project\RTE-I d:\Keil_v5\ARM\PACK\NordicSemiconductor\nRF_DeviceFamilyPack\8.17.0\Device\Include-I d:\Keil_v5\ARM\CMSIS\Include--pd "__UVISION_VERSION SETA 515" --pd "NRF52 SETA 1"--list .\debug\arm_startup_nrf52.lst --xref -o .\debug\arm_startup_nrf52.o --depend .\debug\arm_startup_nrf52.d)
-F (..\nRF\system\system_clock.c)(0x5DD2A736)(-c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork -I..\application -I..\common -I..\nRF\core -I..\nRF\system -I..\nRF\driver -I..\device -I..\device\dev_cx93510 --c99-I F:\work20200312\chengxu\TYGD31-2.4GHZ\TYGD_TX\Project\RTE-I d:\Keil_v5\ARM\PACK\NordicSemiconductor\nRF_DeviceFamilyPack\8.17.0\Device\Include-I d:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="515" -DNRF52 -DCONFIG_GPIO_AS_PINRESET -DNRF52 -DDEBUG-o .\debug\system_clock.o --omf_browse .\debug\system_clock.crf --depend .\debug\system_clock.d)
-I (..\nRF\system\system_clock.h)(0x5D8DD656)
-I (..\common\common.h)(0x5D8DD946)
-I (..\common\typedef.h)(0x5DD29964)
-I (..\common\define.h)(0x5DEE2924)
-I (..\common\config.h)(0x5DD2978C)
-I (..\common\protocol.h)(0x5E0421D8)
-I (..\common\version.h)(0x5DD2A350)
-I (..\common\delay.h)(0x5DD2A22E)
-I (..\nRF\core\nrf.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\core_cm4.h)(0x5A4AE20E)
-I (D:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x54C245B8)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cmInstr.h)(0x51C7B54A)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cmFunc.h)(0x51C7B54A)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cm4_simd.h)(0x51C7B54A)
-I (..\nRF\system\system_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_bitfields.h)(0x5A4AE20E)
-I (..\nRF\core\nrf51_to_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_name_change.h)(0x5A4AE20E)
-I (..\nRF\core\compiler_abstraction.h)(0x5A4AE20E)
-F (..\nRF\system\system_nrf52.c)(0x5A4AE20E)(-c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork -I..\application -I..\common -I..\nRF\core -I..\nRF\system -I..\nRF\driver -I..\device -I..\device\dev_cx93510 --c99-I F:\work20200312\chengxu\TYGD31-2.4GHZ\TYGD_TX\Project\RTE-I d:\Keil_v5\ARM\PACK\NordicSemiconductor\nRF_DeviceFamilyPack\8.17.0\Device\Include-I d:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="515" -DNRF52 -DCONFIG_GPIO_AS_PINRESET -DNRF52 -DDEBUG-o .\debug\system_nrf52.o --omf_browse .\debug\system_nrf52.crf --depend .\debug\system_nrf52.d)
-I (D:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x54C245B8)
-I (D:\Keil_v5\ARM\ARMCC\include\stdbool.h)(0x54C245B8)
-I (..\nRF\core\nrf.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\core_cm4.h)(0x5A4AE20E)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cmInstr.h)(0x51C7B54A)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cmFunc.h)(0x51C7B54A)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cm4_simd.h)(0x51C7B54A)
-I (..\nRF\system\system_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_bitfields.h)(0x5A4AE20E)
-I (..\nRF\core\nrf51_to_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_name_change.h)(0x5A4AE20E)
-I (..\nRF\core\compiler_abstraction.h)(0x5A4AE20E)
-F (..\nRF\system\system_tick.c)(0x5D8DD662)(-c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork -I..\application -I..\common -I..\nRF\core -I..\nRF\system -I..\nRF\driver -I..\device -I..\device\dev_cx93510 --c99-I F:\work20200312\chengxu\TYGD31-2.4GHZ\TYGD_TX\Project\RTE-I d:\Keil_v5\ARM\PACK\NordicSemiconductor\nRF_DeviceFamilyPack\8.17.0\Device\Include-I d:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="515" -DNRF52 -DCONFIG_GPIO_AS_PINRESET -DNRF52 -DDEBUG-o .\debug\system_tick.o --omf_browse .\debug\system_tick.crf --depend .\debug\system_tick.d)
-I (..\nRF\system\system_tick.h)(0x5D8DD666)
-I (..\common\common.h)(0x5D8DD946)
-I (..\common\typedef.h)(0x5DD29964)
-I (..\common\define.h)(0x5DEE2924)
-I (..\common\config.h)(0x5DD2978C)
-I (..\common\protocol.h)(0x5E0421D8)
-I (..\common\version.h)(0x5DD2A350)
-I (..\common\delay.h)(0x5DD2A22E)
-I (..\nRF\core\nrf.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\core_cm4.h)(0x5A4AE20E)
-I (D:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x54C245B8)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cmInstr.h)(0x51C7B54A)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cmFunc.h)(0x51C7B54A)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cm4_simd.h)(0x51C7B54A)
-I (..\nRF\system\system_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_bitfields.h)(0x5A4AE20E)
-I (..\nRF\core\nrf51_to_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_name_change.h)(0x5A4AE20E)
-I (..\nRF\core\compiler_abstraction.h)(0x5A4AE20E)
-F (..\nRF\system\system_it_vector.c)(0x5D8DD67A)(-c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork -I..\application -I..\common -I..\nRF\core -I..\nRF\system -I..\nRF\driver -I..\device -I..\device\dev_cx93510 --c99-I F:\work20200312\chengxu\TYGD31-2.4GHZ\TYGD_TX\Project\RTE-I d:\Keil_v5\ARM\PACK\NordicSemiconductor\nRF_DeviceFamilyPack\8.17.0\Device\Include-I d:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="515" -DNRF52 -DCONFIG_GPIO_AS_PINRESET -DNRF52 -DDEBUG-o .\debug\system_it_vector.o --omf_browse .\debug\system_it_vector.crf --depend .\debug\system_it_vector.d)
-I (..\nRF\system\system_it_vector.h)(0x5D8DD670)
-I (..\common\common.h)(0x5D8DD946)
-I (..\common\typedef.h)(0x5DD29964)
-I (..\common\define.h)(0x5DEE2924)
-I (..\common\config.h)(0x5DD2978C)
-I (..\common\protocol.h)(0x5E0421D8)
-I (..\common\version.h)(0x5DD2A350)
-I (..\common\delay.h)(0x5DD2A22E)
-I (..\nRF\core\nrf.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\core_cm4.h)(0x5A4AE20E)
-I (D:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x54C245B8)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cmInstr.h)(0x51C7B54A)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cmFunc.h)(0x51C7B54A)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cm4_simd.h)(0x51C7B54A)
-I (..\nRF\system\system_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_bitfields.h)(0x5A4AE20E)
-I (..\nRF\core\nrf51_to_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_name_change.h)(0x5A4AE20E)
-I (..\nRF\core\compiler_abstraction.h)(0x5A4AE20E)
-F (..\nRF\driver\drv_gpio.c)(0x5D8DD6BE)(-c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork -I..\application -I..\common -I..\nRF\core -I..\nRF\system -I..\nRF\driver -I..\device -I..\device\dev_cx93510 --c99-I F:\work20200312\chengxu\TYGD31-2.4GHZ\TYGD_TX\Project\RTE-I d:\Keil_v5\ARM\PACK\NordicSemiconductor\nRF_DeviceFamilyPack\8.17.0\Device\Include-I d:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="515" -DNRF52 -DCONFIG_GPIO_AS_PINRESET -DNRF52 -DDEBUG-o .\debug\drv_gpio.o --omf_browse .\debug\drv_gpio.crf --depend .\debug\drv_gpio.d)
-I (..\nRF\driver\drv_gpio.h)(0x5D8DD6C6)
-I (..\common\common.h)(0x5D8DD946)
-I (..\common\typedef.h)(0x5DD29964)
-I (..\common\define.h)(0x5DEE2924)
-I (..\common\config.h)(0x5DD2978C)
-I (..\common\protocol.h)(0x5E0421D8)
-I (..\common\version.h)(0x5DD2A350)
-I (..\common\delay.h)(0x5DD2A22E)
-I (..\nRF\core\nrf.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\core_cm4.h)(0x5A4AE20E)
-I (D:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x54C245B8)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cmInstr.h)(0x51C7B54A)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cmFunc.h)(0x51C7B54A)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cm4_simd.h)(0x51C7B54A)
-I (..\nRF\system\system_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_bitfields.h)(0x5A4AE20E)
-I (..\nRF\core\nrf51_to_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_name_change.h)(0x5A4AE20E)
-I (..\nRF\core\compiler_abstraction.h)(0x5A4AE20E)
-F (..\nRF\driver\drv_radio.c)(0x5F69C3E6)(-c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork -I..\application -I..\common -I..\nRF\core -I..\nRF\system -I..\nRF\driver -I..\device -I..\device\dev_cx93510 --c99-I F:\work20200312\chengxu\TYGD31-2.4GHZ\TYGD_TX\Project\RTE-I d:\Keil_v5\ARM\PACK\NordicSemiconductor\nRF_DeviceFamilyPack\8.17.0\Device\Include-I d:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="515" -DNRF52 -DCONFIG_GPIO_AS_PINRESET -DNRF52 -DDEBUG-o .\debug\drv_radio.o --omf_browse .\debug\drv_radio.crf --depend .\debug\drv_radio.d)
-I (..\nRF\driver\drv_radio.h)(0x5FD1E621)
-I (..\common\common.h)(0x5D8DD946)
-I (..\common\typedef.h)(0x5DD29964)
-I (..\common\define.h)(0x5DEE2924)
-I (..\common\config.h)(0x5DD2978C)
-I (..\common\protocol.h)(0x5E0421D8)
-I (..\common\version.h)(0x5DD2A350)
-I (..\common\delay.h)(0x5DD2A22E)
-I (..\nRF\driver\drv_device_id.h)(0x5D8DD7B8)
-I (..\nRF\core\nrf.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\core_cm4.h)(0x5A4AE20E)
-I (d:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x54C245B8)
-I (d:\Keil_v5\ARM\CMSIS\Include\core_cmInstr.h)(0x51C7B54A)
-I (d:\Keil_v5\ARM\CMSIS\Include\core_cmFunc.h)(0x51C7B54A)
-I (d:\Keil_v5\ARM\CMSIS\Include\core_cm4_simd.h)(0x51C7B54A)
-I (..\nRF\system\system_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_bitfields.h)(0x5A4AE20E)
-I (..\nRF\core\nrf51_to_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_name_change.h)(0x5A4AE20E)
-I (..\nRF\core\compiler_abstraction.h)(0x5A4AE20E)
-I (..\nRF\driver\drv_wdt.h)(0x5D8DD7B8)
-I (..\device\dev_led.h)(0x5D8DD80E)
-I (..\nRF\driver\drv_flash.h)(0x5D8DDC66)
-I (d:\Keil_v5\ARM\ARMCC\include\string.h)(0x54C245B8)
-F (..\nRF\driver\drv_spi.c)(0x5DD2A7C0)(-c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork -I..\application -I..\common -I..\nRF\core -I..\nRF\system -I..\nRF\driver -I..\device -I..\device\dev_cx93510 --c99-I F:\work20200312\chengxu\TYGD31-2.4GHZ\TYGD_TX\Project\RTE-I d:\Keil_v5\ARM\PACK\NordicSemiconductor\nRF_DeviceFamilyPack\8.17.0\Device\Include-I d:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="515" -DNRF52 -DCONFIG_GPIO_AS_PINRESET -DNRF52 -DDEBUG-o .\debug\drv_spi.o --omf_browse .\debug\drv_spi.crf --depend .\debug\drv_spi.d)
-I (..\nRF\driver\drv_spi.h)(0x5D8DD77E)
-I (..\common\common.h)(0x5D8DD946)
-I (..\common\typedef.h)(0x5DD29964)
-I (..\common\define.h)(0x5DEE2924)
-I (..\common\config.h)(0x5DD2978C)
-I (..\common\protocol.h)(0x5E0421D8)
-I (..\common\version.h)(0x5DD2A350)
-I (..\common\delay.h)(0x5DD2A22E)
-I (..\nRF\driver\drv_gpio.h)(0x5D8DD6C6)
-I (..\nRF\core\nrf.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\core_cm4.h)(0x5A4AE20E)
-I (D:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x54C245B8)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cmInstr.h)(0x51C7B54A)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cmFunc.h)(0x51C7B54A)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cm4_simd.h)(0x51C7B54A)
-I (..\nRF\system\system_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_bitfields.h)(0x5A4AE20E)
-I (..\nRF\core\nrf51_to_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_name_change.h)(0x5A4AE20E)
-I (..\nRF\core\compiler_abstraction.h)(0x5A4AE20E)
-F (..\nRF\driver\drv_timer.c)(0x5DD2B900)(-c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork -I..\application -I..\common -I..\nRF\core -I..\nRF\system -I..\nRF\driver -I..\device -I..\device\dev_cx93510 --c99-I F:\work20200312\chengxu\TYGD31-2.4GHZ\TYGD_TX\Project\RTE-I d:\Keil_v5\ARM\PACK\NordicSemiconductor\nRF_DeviceFamilyPack\8.17.0\Device\Include-I d:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="515" -DNRF52 -DCONFIG_GPIO_AS_PINRESET -DNRF52 -DDEBUG-o .\debug\drv_timer.o --omf_browse .\debug\drv_timer.crf --depend .\debug\drv_timer.d)
-I (..\nRF\driver\drv_timer.h)(0x5DD2B902)
-I (..\common\common.h)(0x5D8DD946)
-I (..\common\typedef.h)(0x5DD29964)
-I (..\common\define.h)(0x5DEE2924)
-I (..\common\config.h)(0x5DD2978C)
-I (..\common\protocol.h)(0x5E0421D8)
-I (..\common\version.h)(0x5DD2A350)
-I (..\common\delay.h)(0x5DD2A22E)
-I (..\nRF\core\nrf.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\core_cm4.h)(0x5A4AE20E)
-I (D:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x54C245B8)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cmInstr.h)(0x51C7B54A)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cmFunc.h)(0x51C7B54A)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cm4_simd.h)(0x51C7B54A)
-I (..\nRF\system\system_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_bitfields.h)(0x5A4AE20E)
-I (..\nRF\core\nrf51_to_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_name_change.h)(0x5A4AE20E)
-I (..\nRF\core\compiler_abstraction.h)(0x5A4AE20E)
-I (D:\Keil_v5\ARM\ARMCC\include\math.h)(0x54C245B8)
-F (..\nRF\driver\drv_wdt.c)(0x5D8DD7B8)(-c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork -I..\application -I..\common -I..\nRF\core -I..\nRF\system -I..\nRF\driver -I..\device -I..\device\dev_cx93510 --c99-I F:\work20200312\chengxu\TYGD31-2.4GHZ\TYGD_TX\Project\RTE-I d:\Keil_v5\ARM\PACK\NordicSemiconductor\nRF_DeviceFamilyPack\8.17.0\Device\Include-I d:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="515" -DNRF52 -DCONFIG_GPIO_AS_PINRESET -DNRF52 -DDEBUG-o .\debug\drv_wdt.o --omf_browse .\debug\drv_wdt.crf --depend .\debug\drv_wdt.d)
-I (..\nRF\driver\drv_wdt.h)(0x5D8DD7B8)
-I (..\common\common.h)(0x5D8DD946)
-I (..\common\typedef.h)(0x5DD29964)
-I (..\common\define.h)(0x5DEE2924)
-I (..\common\config.h)(0x5DD2978C)
-I (..\common\protocol.h)(0x5E0421D8)
-I (..\common\version.h)(0x5DD2A350)
-I (..\common\delay.h)(0x5DD2A22E)
-I (..\nRF\core\nrf.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\core_cm4.h)(0x5A4AE20E)
-I (D:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x54C245B8)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cmInstr.h)(0x51C7B54A)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cmFunc.h)(0x51C7B54A)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cm4_simd.h)(0x51C7B54A)
-I (..\nRF\system\system_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_bitfields.h)(0x5A4AE20E)
-I (..\nRF\core\nrf51_to_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_name_change.h)(0x5A4AE20E)
-I (..\nRF\core\compiler_abstraction.h)(0x5A4AE20E)
-F (..\nRF\driver\drv_flash.c)(0x5D8DDC66)(-c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork -I..\application -I..\common -I..\nRF\core -I..\nRF\system -I..\nRF\driver -I..\device -I..\device\dev_cx93510 --c99-I F:\work20200312\chengxu\TYGD31-2.4GHZ\TYGD_TX\Project\RTE-I d:\Keil_v5\ARM\PACK\NordicSemiconductor\nRF_DeviceFamilyPack\8.17.0\Device\Include-I d:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="515" -DNRF52 -DCONFIG_GPIO_AS_PINRESET -DNRF52 -DDEBUG-o .\debug\drv_flash.o --omf_browse .\debug\drv_flash.crf --depend .\debug\drv_flash.d)
-I (..\nRF\driver\drv_flash.h)(0x5D8DDC66)
-I (..\common\common.h)(0x5D8DD946)
-I (..\common\typedef.h)(0x5DD29964)
-I (..\common\define.h)(0x5DEE2924)
-I (..\common\config.h)(0x5DD2978C)
-I (..\common\protocol.h)(0x5E0421D8)
-I (..\common\version.h)(0x5DD2A350)
-I (..\common\delay.h)(0x5DD2A22E)
-I (..\nRF\core\nrf.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\core_cm4.h)(0x5A4AE20E)
-I (D:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x54C245B8)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cmInstr.h)(0x51C7B54A)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cmFunc.h)(0x51C7B54A)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cm4_simd.h)(0x51C7B54A)
-I (..\nRF\system\system_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_bitfields.h)(0x5A4AE20E)
-I (..\nRF\core\nrf51_to_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_name_change.h)(0x5A4AE20E)
-I (..\nRF\core\compiler_abstraction.h)(0x5A4AE20E)
-F (..\application\domain.c)(0x5F053C1A)(-c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork -I..\application -I..\common -I..\nRF\core -I..\nRF\system -I..\nRF\driver -I..\device -I..\device\dev_cx93510 --c99-I F:\work20200312\chengxu\TYGD31-2.4GHZ\TYGD_TX\Project\RTE-I d:\Keil_v5\ARM\PACK\NordicSemiconductor\nRF_DeviceFamilyPack\8.17.0\Device\Include-I d:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="515" -DNRF52 -DCONFIG_GPIO_AS_PINRESET -DNRF52 -DDEBUG-o .\debug\domain.o --omf_browse .\debug\domain.crf --depend .\debug\domain.d)
-I (..\application\domain.h)(0x5DD297CC)
-I (..\common\common.h)(0x5D8DD946)
-I (..\common\typedef.h)(0x5DD29964)
-I (..\common\define.h)(0x5DEE2924)
-I (..\common\config.h)(0x5DD2978C)
-I (..\common\protocol.h)(0x5E0421D8)
-I (..\common\version.h)(0x5DD2A350)
-I (..\common\delay.h)(0x5DD2A22E)
-I (..\application\image.h)(0x5DF7325C)
-I (..\application\capsule_sn_broadcast.h)(0x5E04210E)
-I (..\nRF\driver\drv_wdt.h)(0x5D8DD7B8)
-I (..\nRF\driver\drv_radio.h)(0x5FD1E621)
-I (..\nRF\driver\drv_timer.h)(0x5DD2B902)
-I (..\nRF\driver\drv_spi.h)(0x5D8DD77E)
-I (..\device\dev_led.h)(0x5D8DD80E)
-I (..\device\dev_cx93510\dev_cx93510.h)(0x5F4F2B4D)
-I (..\device\dev_cx93510\dev_sensor.h)(0x5D8DD630)
-I (..\nRF\core\nrf.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\core_cm4.h)(0x5A4AE20E)
-I (d:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x54C245B8)
-I (d:\Keil_v5\ARM\CMSIS\Include\core_cmInstr.h)(0x51C7B54A)
-I (d:\Keil_v5\ARM\CMSIS\Include\core_cmFunc.h)(0x51C7B54A)
-I (d:\Keil_v5\ARM\CMSIS\Include\core_cm4_simd.h)(0x51C7B54A)
-I (..\nRF\system\system_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_bitfields.h)(0x5A4AE20E)
-I (..\nRF\core\nrf51_to_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_name_change.h)(0x5A4AE20E)
-I (..\nRF\core\compiler_abstraction.h)(0x5A4AE20E)
-F (..\application\main.c)(0x5DD2A750)(-c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork -I..\application -I..\common -I..\nRF\core -I..\nRF\system -I..\nRF\driver -I..\device -I..\device\dev_cx93510 --c99-I F:\work20200312\chengxu\TYGD31-2.4GHZ\TYGD_TX\Project\RTE-I d:\Keil_v5\ARM\PACK\NordicSemiconductor\nRF_DeviceFamilyPack\8.17.0\Device\Include-I d:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="515" -DNRF52 -DCONFIG_GPIO_AS_PINRESET -DNRF52 -DDEBUG-o .\debug\main.o --omf_browse .\debug\main.crf --depend .\debug\main.d)
-I (..\nRF\system\system_clock.h)(0x5D8DD656)
-I (..\common\common.h)(0x5D8DD946)
-I (..\common\typedef.h)(0x5DD29964)
-I (..\common\define.h)(0x5DEE2924)
-I (..\common\config.h)(0x5DD2978C)
-I (..\common\protocol.h)(0x5E0421D8)
-I (..\common\version.h)(0x5DD2A350)
-I (..\common\delay.h)(0x5DD2A22E)
-I (..\nRF\system\system_it_vector.h)(0x5D8DD670)
-I (..\application\domain.h)(0x5DD297CC)
-I (..\nRF\core\nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\core_cm4.h)(0x5A4AE20E)
-I (D:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x54C245B8)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cmInstr.h)(0x51C7B54A)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cmFunc.h)(0x51C7B54A)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cm4_simd.h)(0x51C7B54A)
-I (..\nRF\system\system_nrf52.h)(0x5A4AE20E)
-F (..\Application\capsule_sn_broadcast.c)(0x5FD1E4BB)(-c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork -I..\application -I..\common -I..\nRF\core -I..\nRF\system -I..\nRF\driver -I..\device -I..\device\dev_cx93510 --c99-I F:\work20200312\chengxu\TYGD31-2.4GHZ\TYGD_TX\Project\RTE-I d:\Keil_v5\ARM\PACK\NordicSemiconductor\nRF_DeviceFamilyPack\8.17.0\Device\Include-I d:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="515" -DNRF52 -DCONFIG_GPIO_AS_PINRESET -DNRF52 -DDEBUG-o .\debug\capsule_sn_broadcast.o --omf_browse .\debug\capsule_sn_broadcast.crf --depend .\debug\capsule_sn_broadcast.d)
-I (..\Application\capsule_sn_broadcast.h)(0x5E04210E)
-I (..\common\common.h)(0x5D8DD946)
-I (..\common\typedef.h)(0x5DD29964)
-I (..\common\define.h)(0x5DEE2924)
-I (..\common\config.h)(0x5DD2978C)
-I (..\common\protocol.h)(0x5E0421D8)
-I (..\common\version.h)(0x5DD2A350)
-I (..\common\delay.h)(0x5DD2A22E)
-I (..\nRF\driver\drv_radio.h)(0x5FD1E621)
-I (..\nRF\driver\drv_timer.h)(0x5DD2B902)
-I (..\nRF\driver\drv_device_id.h)(0x5D8DD7B8)
-I (..\nRF\core\nrf.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\core_cm4.h)(0x5A4AE20E)
-I (d:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x54C245B8)
-I (d:\Keil_v5\ARM\CMSIS\Include\core_cmInstr.h)(0x51C7B54A)
-I (d:\Keil_v5\ARM\CMSIS\Include\core_cmFunc.h)(0x51C7B54A)
-I (d:\Keil_v5\ARM\CMSIS\Include\core_cm4_simd.h)(0x51C7B54A)
-I (..\nRF\system\system_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_bitfields.h)(0x5A4AE20E)
-I (..\nRF\core\nrf51_to_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_name_change.h)(0x5A4AE20E)
-I (..\nRF\core\compiler_abstraction.h)(0x5A4AE20E)
-I (..\nRF\driver\drv_flash.h)(0x5D8DDC66)
-F (..\Application\image.c)(0x5F4F2CEF)(-c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork -I..\application -I..\common -I..\nRF\core -I..\nRF\system -I..\nRF\driver -I..\device -I..\device\dev_cx93510 --c99-I F:\work20200312\chengxu\TYGD31-2.4GHZ\TYGD_TX\Project\RTE-I d:\Keil_v5\ARM\PACK\NordicSemiconductor\nRF_DeviceFamilyPack\8.17.0\Device\Include-I d:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="515" -DNRF52 -DCONFIG_GPIO_AS_PINRESET -DNRF52 -DDEBUG-o .\debug\image.o --omf_browse .\debug\image.crf --depend .\debug\image.d)
-I (..\Application\image.h)(0x5DF7325C)
-I (..\common\common.h)(0x5D8DD946)
-I (..\common\typedef.h)(0x5DD29964)
-I (..\common\define.h)(0x5DEE2924)
-I (..\common\config.h)(0x5DD2978C)
-I (..\common\protocol.h)(0x5E0421D8)
-I (..\common\version.h)(0x5DD2A350)
-I (..\common\delay.h)(0x5DD2A22E)
-I (..\nRF\driver\drv_radio.h)(0x5FD1E621)
-I (..\nRF\driver\drv_device_id.h)(0x5D8DD7B8)
-I (..\nRF\core\nrf.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\core_cm4.h)(0x5A4AE20E)
-I (d:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x54C245B8)
-I (d:\Keil_v5\ARM\CMSIS\Include\core_cmInstr.h)(0x51C7B54A)
-I (d:\Keil_v5\ARM\CMSIS\Include\core_cmFunc.h)(0x51C7B54A)
-I (d:\Keil_v5\ARM\CMSIS\Include\core_cm4_simd.h)(0x51C7B54A)
-I (..\nRF\system\system_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_bitfields.h)(0x5A4AE20E)
-I (..\nRF\core\nrf51_to_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_name_change.h)(0x5A4AE20E)
-I (..\nRF\core\compiler_abstraction.h)(0x5A4AE20E)
-I (..\device\dev_cx93510\dev_cx93510.h)(0x5F4F2B4D)
-I (..\device\dev_cx93510\dev_sensor.h)(0x5D8DD630)
-I (..\device\dev_led.h)(0x5D8DD80E)
-I (..\nRF\driver\drv_flash.h)(0x5D8DDC66)
-I (..\Application\capsule_sn_broadcast.h)(0x5E04210E)
-I (d:\Keil_v5\ARM\ARMCC\include\string.h)(0x54C245B8)
-F (..\common\delay.c)(0x5D8DD804)(-c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork -I..\application -I..\common -I..\nRF\core -I..\nRF\system -I..\nRF\driver -I..\device -I..\device\dev_cx93510 --c99-I F:\work20200312\chengxu\TYGD31-2.4GHZ\TYGD_TX\Project\RTE-I d:\Keil_v5\ARM\PACK\NordicSemiconductor\nRF_DeviceFamilyPack\8.17.0\Device\Include-I d:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="515" -DNRF52 -DCONFIG_GPIO_AS_PINRESET -DNRF52 -DDEBUG-o .\debug\delay.o --omf_browse .\debug\delay.crf --depend .\debug\delay.d)
-I (..\common\typedef.h)(0x5DD29964)
-I (..\common\delay.h)(0x5DD2A22E)
-F (..\common\common.h)(0x5D8DD946)()
-F (..\common\config.h)(0x5DD2978C)()
-F (..\common\define.h)(0x5DEE2924)()
-F (..\common\delay.h)(0x5DD2A22E)()
-F (..\common\protocol.h)(0x5E0421D8)()
-F (..\common\typedef.h)(0x5DD29964)()
-F (..\common\version.h)(0x5DD2A350)()
-F (..\device\dev_cx93510\dev_cx93510.c)(0x5F4F2CEF)(-c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork -I..\application -I..\common -I..\nRF\core -I..\nRF\system -I..\nRF\driver -I..\device -I..\device\dev_cx93510 --c99-I F:\work20200312\chengxu\TYGD31-2.4GHZ\TYGD_TX\Project\RTE-I d:\Keil_v5\ARM\PACK\NordicSemiconductor\nRF_DeviceFamilyPack\8.17.0\Device\Include-I d:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="515" -DNRF52 -DCONFIG_GPIO_AS_PINRESET -DNRF52 -DDEBUG-o .\debug\dev_cx93510.o --omf_browse .\debug\dev_cx93510.crf --depend .\debug\dev_cx93510.d)
-I (..\device\dev_cx93510\dev_cx93510_regs.h)(0x5D8DD7B8)
-I (..\device\dev_cx93510\dev_cx93510.h)(0x5F4F2B4D)
-I (..\common\common.h)(0x5D8DD946)
-I (..\common\typedef.h)(0x5DD29964)
-I (..\common\define.h)(0x5DEE2924)
-I (..\common\config.h)(0x5DD2978C)
-I (..\common\protocol.h)(0x5E0421D8)
-I (..\common\version.h)(0x5DD2A350)
-I (..\common\delay.h)(0x5DD2A22E)
-I (..\device\dev_cx93510\dev_sensor.h)(0x5D8DD630)
-I (..\device\dev_led.h)(0x5D8DD80E)
-I (..\nRF\driver\drv_spi.h)(0x5D8DD77E)
-I (..\nRF\driver\drv_gpio.h)(0x5D8DD6C6)
-I (..\nRF\core\nrf.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\core_cm4.h)(0x5A4AE20E)
-I (d:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x54C245B8)
-I (d:\Keil_v5\ARM\CMSIS\Include\core_cmInstr.h)(0x51C7B54A)
-I (d:\Keil_v5\ARM\CMSIS\Include\core_cmFunc.h)(0x51C7B54A)
-I (d:\Keil_v5\ARM\CMSIS\Include\core_cm4_simd.h)(0x51C7B54A)
-I (..\nRF\system\system_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_bitfields.h)(0x5A4AE20E)
-I (..\nRF\core\nrf51_to_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_name_change.h)(0x5A4AE20E)
-I (..\nRF\core\compiler_abstraction.h)(0x5A4AE20E)
-I (..\nRF\driver\drv_timer.h)(0x5DD2B902)
-I (..\nRF\driver\drv_wdt.h)(0x5D8DD7B8)
-F (..\device\dev_cx93510\dev_sensor.c)(0x5FCF4FA6)(-c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork -I..\application -I..\common -I..\nRF\core -I..\nRF\system -I..\nRF\driver -I..\device -I..\device\dev_cx93510 --c99-I F:\work20200312\chengxu\TYGD31-2.4GHZ\TYGD_TX\Project\RTE-I d:\Keil_v5\ARM\PACK\NordicSemiconductor\nRF_DeviceFamilyPack\8.17.0\Device\Include-I d:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="515" -DNRF52 -DCONFIG_GPIO_AS_PINRESET -DNRF52 -DDEBUG-o .\debug\dev_sensor.o --omf_browse .\debug\dev_sensor.crf --depend .\debug\dev_sensor.d)
-I (..\device\dev_cx93510\dev_sensor.h)(0x5D8DD630)
-I (..\common\common.h)(0x5D8DD946)
-I (..\common\typedef.h)(0x5DD29964)
-I (..\common\define.h)(0x5DEE2924)
-I (..\common\config.h)(0x5DD2978C)
-I (..\common\protocol.h)(0x5E0421D8)
-I (..\common\version.h)(0x5DD2A350)
-I (..\common\delay.h)(0x5DD2A22E)
-I (..\device\dev_cx93510\dev_cx93510_regs.h)(0x5D8DD7B8)
-I (..\nRF\driver\drv_spi.h)(0x5D8DD77E)
-I (..\nRF\driver\drv_gpio.h)(0x5D8DD6C6)
-I (..\nRF\core\nrf.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\core_cm4.h)(0x5A4AE20E)
-I (D:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x54C245B8)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cmInstr.h)(0x51C7B54A)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cmFunc.h)(0x51C7B54A)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cm4_simd.h)(0x51C7B54A)
-I (..\nRF\system\system_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_bitfields.h)(0x5A4AE20E)
-I (..\nRF\core\nrf51_to_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_name_change.h)(0x5A4AE20E)
-I (..\nRF\core\compiler_abstraction.h)(0x5A4AE20E)
-F (..\device\dev_led.c)(0x5F053C9E)(-c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork -I..\application -I..\common -I..\nRF\core -I..\nRF\system -I..\nRF\driver -I..\device -I..\device\dev_cx93510 --c99-I F:\work20200312\chengxu\TYGD31-2.4GHZ\TYGD_TX\Project\RTE-I d:\Keil_v5\ARM\PACK\NordicSemiconductor\nRF_DeviceFamilyPack\8.17.0\Device\Include-I d:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="515" -DNRF52 -DCONFIG_GPIO_AS_PINRESET -DNRF52 -DDEBUG-o .\debug\dev_led.o --omf_browse .\debug\dev_led.crf --depend .\debug\dev_led.d)
-I (..\device\dev_led.h)(0x5D8DD80E)
-I (..\common\common.h)(0x5D8DD946)
-I (..\common\typedef.h)(0x5DD29964)
-I (..\common\define.h)(0x5DEE2924)
-I (..\common\config.h)(0x5DD2978C)
-I (..\common\protocol.h)(0x5E0421D8)
-I (..\common\version.h)(0x5DD2A350)
-I (..\common\delay.h)(0x5DD2A22E)
-I (..\nRF\driver\drv_gpio.h)(0x5D8DD6C6)
-I (..\nRF\core\nrf.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\core_cm4.h)(0x5A4AE20E)
-I (D:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x54C245B8)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cmInstr.h)(0x51C7B54A)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cmFunc.h)(0x51C7B54A)
-I (D:\Keil_v5\ARM\CMSIS\Include\core_cm4_simd.h)(0x51C7B54A)
-I (..\nRF\system\system_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_bitfields.h)(0x5A4AE20E)
-I (..\nRF\core\nrf51_to_nrf52.h)(0x5A4AE20E)
-I (..\nRF\core\nrf52_name_change.h)(0x5A4AE20E)
-I (..\nRF\core\compiler_abstraction.h)(0x5A4AE20E)

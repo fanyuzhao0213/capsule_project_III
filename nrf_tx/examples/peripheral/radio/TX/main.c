@@ -92,7 +92,7 @@ static void watchdog_init(void)
 * Return        : None
 ********************************************************************************
 */
-/** @brief 初始化1ms系统节拍，为配置超时、广播周期和图片周期提供时间基准。 */
+/** @brief 初始化1ms活动时基，用于配置超时、采集预热、分片、ACK和快速扫描计时。 */
 static void timer_init(void)
 {
     NRF_TIMER1->TASKS_STOP  = 1u;
@@ -110,6 +110,12 @@ static void timer_init(void)
 }
 
 /** @brief 开启拍照/发送活动阶段所需的HFXO和1ms TIMER1。 */
+/*
+启动外部高频晶振HFXO
+等待晶振稳定
+清空TIMER1
+启动1 ms TIMER1
+让g_time_ms继续计时*/
 static void active_clock_start(void)
 {
     /* HFCLKSTAT.STATE=Running 对内部HFINT和外部HFXO都成立，不能据此
