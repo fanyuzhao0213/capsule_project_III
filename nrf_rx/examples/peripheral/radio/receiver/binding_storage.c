@@ -3,8 +3,8 @@
 
 typedef struct
 {
-    uint8_t sn[8];
-    bool bound;
+    uint8_t sn[8];                                     /** 当前会话绑定的8字节胶囊SN。 */
+    bool bound;                                        /** 当前会话是否已经绑定胶囊。 */
 } receiver_binding_state_t;
 
 static receiver_binding_state_t m_binding;

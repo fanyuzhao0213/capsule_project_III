@@ -38,7 +38,7 @@ static const uint8_t m_antenna_codes[RF1662_ANTENNA_COUNT] =
 
 typedef struct
 {
-    uint8_t current_antenna;
+    uint8_t current_antenna;                            /** RF1662当前选中的天线索引。 */
 } rf1662_state_t;
 
 static rf1662_state_t m_rf1662;

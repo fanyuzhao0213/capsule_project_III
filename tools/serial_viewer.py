@@ -37,7 +37,7 @@ class SerialViewer(QtWidgets.QWidget):
 
         self.cmb_baud = QtWidgets.QComboBox()
         self.cmb_baud.addItems(["9600", "115200", "460800", "921600", "1000000"])
-        self.cmb_baud.setCurrentText("1000000")
+        self.cmb_baud.setCurrentText("921600")
 
         self.btn_refresh = QtWidgets.QPushButton("刷新端口")
         self.btn_refresh.clicked.connect(self._refresh_ports)

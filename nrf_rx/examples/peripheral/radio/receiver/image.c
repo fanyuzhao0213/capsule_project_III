@@ -25,37 +25,37 @@ typedef struct
 {
     struct
     {
-        bool active;
-        uint8_t id;
-        uint8_t capsule_sn[LEGACY_CAPSULE_SN_SIZE];
-        uint16_t length;
-        uint16_t fragment_count;
-        uint16_t received_count;
-        uint8_t version_main;
-        uint8_t version_sub;
-        uint8_t version_test;
-        bool accel_valid;
-        int16_t accel_x;
-        int16_t accel_y;
-        int16_t accel_z;
-        uint8_t received_map[IMAGE_FRAGMENT_COUNT_MAX];
-        uint8_t jpeg[LEGACY_IMAGE_MAX_SIZE];
-    } frame;
-    uint8_t last_capsule_sn[LEGACY_CAPSULE_SN_SIZE];
-    bool last_capsule_sn_valid;
+        bool active;                                    /** 当前是否正在重组一帧图片。 */
+        uint8_t id;                                     /** 当前图片帧ID。 */
+        uint8_t capsule_sn[LEGACY_CAPSULE_SN_SIZE];     /** 当前图片所属胶囊的SN。 */
+        uint16_t length;                                /** 当前JPEG图片总长度，单位字节。 */
+        uint16_t fragment_count;                        /** 当前图片应包含的分片总数。 */
+        uint16_t received_count;                        /** 当前图片已接收的有效分片数。 */
+        uint8_t version_main;                           /** 胶囊固件主版本号。 */
+        uint8_t version_sub;                            /** 胶囊固件次版本号。 */
+        uint8_t version_test;                           /** 胶囊固件测试版本号。 */
+        bool accel_valid;                               /** 当前图片携带的加速度数据是否有效。 */
+        int16_t accel_x;                                /** X轴加速度原始值。 */
+        int16_t accel_y;                                /** Y轴加速度原始值。 */
+        int16_t accel_z;                                /** Z轴加速度原始值。 */
+        uint8_t received_map[IMAGE_FRAGMENT_COUNT_MAX]; /** 各图片分片的接收标记表。 */
+        uint8_t jpeg[LEGACY_IMAGE_MAX_SIZE];            /** JPEG图片重组缓冲区。 */
+    } frame;                                            /** 当前正在接收的图片帧状态。 */
+    uint8_t last_capsule_sn[LEGACY_CAPSULE_SN_SIZE];    /** 最近一次有效胶囊SN。 */
+    bool last_capsule_sn_valid;                         /** 最近胶囊SN是否有效。 */
 
-    uint32_t radio_begin_ms;
-    uint32_t radio_duration_ms;
-    uint32_t uart_begin_ms;
-    uint32_t last_forward_ms;
-    bool have_last_forward;
+    uint32_t radio_begin_ms;                            /** 当前图片开始无线接收的时间，单位ms。 */
+    uint32_t radio_duration_ms;                         /** 当前完整图片的无线接收耗时，单位ms。 */
+    uint32_t uart_begin_ms;                             /** 当前图片开始排队转发STM的时间，单位ms。 */
+    uint32_t last_forward_ms;                           /** 上一帧图片完成STM转发的时间，单位ms。 */
+    bool have_last_forward;                             /** 是否已有可用于计算帧间隔的转发记录。 */
 
-    uint32_t complete_count;
-    uint32_t forwarded_count;
-    uint32_t uart_busy_drop_count;
-    uint32_t incomplete_count;
-    uint32_t checksum_failure_count;
-    uint32_t replaced_count;
+    uint32_t complete_count;                            /** 完整且校验通过的图片总数。 */
+    uint32_t forwarded_count;                           /** 已完成STM转发的图片总数。 */
+    uint32_t uart_busy_drop_count;                      /** 因UART繁忙未能转发的图片总数。 */
+    uint32_t incomplete_count;                          /** 因缺少分片而失败的图片总数。 */
+    uint32_t checksum_failure_count;                    /** 校验和错误的图片总数。 */
+    uint32_t replaced_count;                            /** 被新帧BEGIN替换的未完成图片总数。 */
 } receiver_image_state_t;
 
 static receiver_image_state_t m_image;
@@ -202,9 +202,17 @@ static bool receiver_image_begin(const uint8_t *packet)
 }
 
 /** @brief 按分片序号写入JPEG缓冲，重复分片直接忽略。 */
+/* | 字节位置 | 含义 |
+|---|---|
+| `packet[0]` | `0x80` DATA |
+| `packet[1]` | 图片ID |
+| `packet[2..9]` | 胶囊SN |
+| `packet[10..11]` | 分片索引，大端 |
+| `packet[12...]` | JPEG分片数据 |
+*/
 static void receiver_image_store_fragment(const uint8_t *packet)
 {
-    uint16_t index = LegacyProtocol_GetU16Be(&packet[10]);
+    uint16_t index = LegacyProtocol_GetU16Be(&packet[10]);		//读取分片索引
     uint16_t offset;
     uint16_t length;
 
@@ -215,8 +223,9 @@ static void receiver_image_store_fragment(const uint8_t *packet)
     }
 
     /* 最后一片只复制JPEG剩余长度，避免把Radio填充字节写入图片。 */
-    offset = (uint16_t)(index * LEGACY_IMAGE_PACKET_PAYLOAD_SIZE);
-    length = (uint16_t)(m_image.frame.length - offset);
+    offset = (uint16_t)(index * LEGACY_IMAGE_PACKET_PAYLOAD_SIZE);       //offset = index * 242;
+    length = (uint16_t)(m_image.frame.length - offset);					 //length = frame.length - offset;
+	/* 用最后剩余的字节判断是否大于254 来判断是否是最后一包*/
     if (length > LEGACY_IMAGE_PACKET_PAYLOAD_SIZE)
     {
         length = LEGACY_IMAGE_PACKET_PAYLOAD_SIZE;
@@ -228,6 +237,19 @@ static void receiver_image_store_fragment(const uint8_t *packet)
 }
 
 /** @brief 处理END：检查完整性和校验和，ACK后排队发送STM。 */
+/*
+收到END
+   ↓
+分片是否全部收到？
+   ├─ 否 → 记录不完整，不发送给STM
+   │
+   └─ 是
+       ↓
+   JPEG校验和是否正确？
+       ├─ 否 → 图片失败，通知天线模块
+       │
+       └─ 是 → 发送ACK、更新链路状态、排队发送STM
+*/
 static void receiver_image_finish(const uint8_t *packet)
 {
     uint8_t checksum = 0u;
@@ -242,6 +264,7 @@ static void receiver_image_finish(const uint8_t *packet)
                         (unsigned)m_image.frame.id,
                         (unsigned)m_image.frame.received_count,
                         (unsigned)m_image.frame.fragment_count);
+		//利用END后的无线应答窗口发送快速扫描请求。
         if (receiver_antenna_scan_request_pending())
         {
             receiver_image_send_ack();
@@ -265,17 +288,27 @@ static void receiver_image_finish(const uint8_t *packet)
         return;
     }
 
-    ++m_image.complete_count;
+    ++m_image.complete_count;												// 增加完整图片计数
     m_image.radio_duration_ms = receiver_elapsed_ms(
-        m_image.radio_begin_ms, receiver_timebase_now_ms());
+        m_image.radio_begin_ms, receiver_timebase_now_ms());				// 计算无线接收耗时
     NRF_LOG_INFO("[IMAGE] complete id=%u bytes=%u radio=%ums",
                  (unsigned)m_image.frame.id,
                  (unsigned)m_image.frame.length,
                  (unsigned)m_image.radio_duration_ms);
     /* 先在TX应答窗口内回包，再进行设备信息组装和UART排队。 */
-    receiver_image_send_ack();
-    receiver_antenna_note_complete_image();
-    receiver_image_build_device_info(device_info);
+    receiver_image_send_ack();                                              // 先向TX发送ACK
+    receiver_antenna_note_complete_image();                                 // 通知天线模块图片接收成功   如果是LOCK状态  清除一些超时信息
+    receiver_image_build_device_info(device_info);							// 组装128字节设备信息
+	//将设备信息和JPEG排入UART发送
+	/*
+		UART图片帧结构
+		FF 55 12 34
+		命令0x81
+		2字节载荷长度
+		128字节设备信息
+		JPEG数据
+		1字节载荷校验和
+	*/
     if (receiver_uart_queue_image(device_info, m_image.frame.jpeg,
                                   m_image.frame.length, m_image.frame.id))
     {
@@ -316,6 +349,26 @@ void receiver_image_update_capsule_sn(const uint8_t *capsule_sn)
 }
 
 /** @brief 分派绑定胶囊的BEGIN、DATA和END图片包。 */
+/* 收到非控制无线包
+        ↓
+是否为BEGIN / DATA / END？
+        ↓ 是
+SN是否等于当前绑定胶囊？
+        ↓ 是
+    ┌───┴────┐
+  BEGIN    DATA / END
+    │          │
+创建重组上下文  是否为孤立END？
+               │
+         是 ───┴──→ 发送0x12扫描请求
+               │ 否
+         帧ID、SN是否匹配？
+               │
+        ┌──────┴──────┐
+       DATA           END
+        │              │
+     保存分片       完整性和校验
+	 */
 void receiver_image_process_packet(const uint8_t *packet)
 {
     bool image_packet;
@@ -335,11 +388,17 @@ void receiver_image_process_packet(const uint8_t *packet)
 
     if (packet[0] == LEGACY_CMD_IMAGE_BEGIN)
     {
+		//BEGIN包单独处理
         (void)receiver_image_begin(packet);
         return;
     }
 
     /* SEEK_END捕获的孤立END无需已有BEGIN，也可用于发起快速扫描。 */
+	/* 
+		1. 必须是END
+		2. 当前正在等待快速扫描协商
+		3. 当前没有匹配的图片重组上下文
+	*/
     if ((packet[0] == LEGACY_CMD_IMAGE_END) &&
         receiver_antenna_scan_request_pending() &&
         (!m_image.frame.active || (packet[1] != m_image.frame.id)))
@@ -348,6 +407,12 @@ void receiver_image_process_packet(const uint8_t *packet)
         return;
     }
 
+	/* 
+		校验DATA/END是否属于当前图片 
+		1. 当前必须有活动图片
+		2. 图片ID必须一致
+		3. 图片SN必须与BEGIN保存的SN一致
+	*/
     if (!m_image.frame.active || (packet[1] != m_image.frame.id) ||
         (memcmp(&packet[2], m_image.frame.capsule_sn,
                 LEGACY_CAPSULE_SN_SIZE) != 0))
@@ -357,6 +422,7 @@ void receiver_image_process_packet(const uint8_t *packet)
 
     if (packet[0] == LEGACY_CMD_IMAGE_DATA)
     {
+		/* DATA包处理 */
         receiver_image_store_fragment(packet);
     }
     else if (packet[0] == LEGACY_CMD_IMAGE_END)

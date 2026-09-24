@@ -26,37 +26,37 @@ typedef enum
 
 typedef struct
 {
-    receiver_antenna_state_id_t state;
+    receiver_antenna_state_id_t state;                  /** 当前天线业务状态。 */
 
-    volatile uint32_t service_elapsed_ms;
-    volatile bool service_due;
+    volatile uint32_t service_elapsed_ms;               /** 周期服务累计时间，单位ms。 */
+    volatile bool service_due;                          /** 已到达一次天线调度周期。 */
 
-    uint8_t antenna;
-    uint8_t round;
-    uint32_t deadline_ms;
-    uint32_t hold_until_ms;
-    bool discovery_holding;
+    uint8_t antenna;                                    /** 当前正在扫描的天线索引。 */
+    uint8_t round;                                      /** 当前扫描已完成的轮数。 */
+    uint32_t deadline_ms;                               /** 当前天线驻留截止时间，单位ms。 */
+    uint32_t hold_until_ms;                             /** 协商期间保持当前天线的截止时间，单位ms。 */
+    bool discovery_holding;                             /** 发现SN后是否正在延长当前天线驻留。 */
 
-    volatile bool end_pending;
-    volatile uint8_t end_frame_id;
-    volatile bool fast_start_pending;
-    volatile bool request_pending;
-    volatile uint8_t request_attempts;
+    volatile bool end_pending;                          /** ISR已捕获待处理的图片END包。 */
+    volatile uint8_t end_frame_id;                      /** 待处理END包对应的图片帧ID。 */
+    volatile bool fast_start_pending;                   /** ISR已收到待处理的快速扫描许可。 */
+    volatile bool request_pending;                      /** 当前是否允许捕获END并发起快速扫描请求。 */
+    volatile uint8_t request_attempts;                  /** 本轮快速扫描请求已发送次数。 */
 
-    volatile uint32_t window_total;
-    volatile uint32_t window_valid;
-    volatile uint32_t window_rssi_sum;
-    uint32_t valid_count[RF1662_ANTENNA_COUNT];
-    uint32_t rssi_sum[RF1662_ANTENNA_COUNT];
-    uint8_t latest_rssi[RF1662_ANTENNA_COUNT];
+    volatile uint32_t window_total;                     /** 当前驻留窗口收到的无线包总数。 */
+    volatile uint32_t window_valid;                     /** 当前窗口中SN匹配的有效广播包数。 */
+    volatile uint32_t window_rssi_sum;                  /** 当前窗口有效广播包的RSSI幅值累计和。 */
+    uint32_t valid_count[RF1662_ANTENNA_COUNT];         /** 各天线累计的有效RSSI样本数。 */
+    uint32_t rssi_sum[RF1662_ANTENNA_COUNT];            /** 各天线累计的RSSI幅值总和。 */
+    uint8_t latest_rssi[RF1662_ANTENNA_COUNT];          /** 各天线最近统计的平均RSSI幅值。 */
 
-    uint8_t candidates[3];
-    uint8_t candidate_count;
-    uint8_t candidate_index;
+    uint8_t candidates[3];                              /** 按信号质量排序的前三个天线索引。 */
+    uint8_t candidate_count;                            /** 当前有效候选天线数量。 */
+    uint8_t candidate_index;                            /** 当前锁定天线在候选数组中的位置。 */
 
-    volatile uint32_t last_target_packet_ms;
-    uint32_t last_complete_image_ms;
-    uint8_t failed_frame_count;
+    volatile uint32_t last_target_packet_ms;            /** 最近收到绑定胶囊有效包的时间，单位ms。 */
+    uint32_t last_complete_image_ms;                    /** 最近完整接收一帧图片的时间，单位ms。 */
+    uint8_t failed_frame_count;                         /** 当前锁定天线连续接收失败的图片帧数。 */
 } receiver_antenna_state_t;
 
 static receiver_antenna_state_t m_antenna;
@@ -364,15 +364,20 @@ bool receiver_antenna_on_radio_packet(const uint8_t *packet,
 /** @brief 主循环优先处理ISR挂起的0x11和END事件。 */
 bool receiver_antenna_service_events(void)
 {
+	//已经收到TX发送的0x11许可
     if (m_antenna.fast_start_pending)
     {
         /* 先清事件再迁移状态，防止下一轮重复启动扫描。 */
         m_antenna.fast_start_pending = false;
         NRF_LOG_INFO("[SCAN] matched 0x11; starting formal RSSI scan");
-        receiver_antenna_start_fast_scan();
+        receiver_antenna_start_fast_scan();          //进入正式RSSI扫描
         return true;
     }
 
+	/* end_pending表示在SEEK_END状态轮询天线时，收到了：
+		- CRC正确；
+		- SN与当前绑定胶囊一致；
+		- 命令类型为图片END；*/
     if (m_antenna.end_pending)
     {
         uint8_t image_id = m_antenna.end_frame_id;
@@ -387,7 +392,8 @@ bool receiver_antenna_service_events(void)
                 receiver_antenna_send_fast_scan_request(
                     image_id, receiver_binding_get());
                 /* 停在捕获END的天线上，给TX留出接收请求和回复时间。 */
-                m_antenna.hold_until_ms = receiver_timebase_now_ms() + 150u;
+                m_antenna.hold_until_ms = receiver_timebase_now_ms() +
+                                          RF1662_SCAN_REQUEST_HOLD_MS;
             }
             else
             {
@@ -401,6 +407,19 @@ bool receiver_antenna_service_events(void)
 }
 
 /** @brief 按软件节拍推进发现、寻END、正式扫描和锁定监测。 */
+/* 未绑定
+  │
+  ▼
+DISCOVERY ──绑定成功──► SEEK_END ──收到0x11──► FAST_SCAN
+  ▲                         ▲                       │
+  │                         │                       │
+解除绑定              无有效候选/候选耗尽       扫描完成
+                            │                       │
+                            └──── LOCKED ◄──────────┘
+                                      │
+                          当前天线失联或接收质量差
+                                      │
+                             下一候选 / SEEK_END */
 bool receiver_antenna_service_schedule(void)
 {
     uint32_t now;
@@ -417,22 +436,24 @@ bool receiver_antenna_service_schedule(void)
     {
         if (receiver_binding_is_bound())
         {
-            receiver_antenna_start_seek_end();
+            receiver_antenna_start_seek_end();    //进入协商准备状态，轮询12路寻找绑定胶囊的图片END
         }
+		/* 判断当前天线的驻留时间是否结束*/
         else if ((int32_t)(now - m_antenna.deadline_ms) >= 0)
         {
-            m_antenna.discovery_holding = false;
+            m_antenna.discovery_holding = false;         //清除“发现SN后延长驻留”的状态。
             m_antenna.antenna = (uint8_t)((m_antenna.antenna + 1u) %
-                                           RF1662_ANTENNA_COUNT);
+                                           RF1662_ANTENNA_COUNT);        //切换到下一路天线。
             receiver_radio_select_antenna(m_antenna.antenna);
             m_antenna.deadline_ms = now + RF1662_DISCOVERY_DWELL_MS;
         }
         return true;
     }
 
+	// 进入未绑定发现状态，从默认天线逐路寻找任意SN广播
     if (!receiver_binding_is_bound())
     {
-        receiver_antenna_start_discovery();
+        receiver_antenna_start_discovery();              //只要当前处于SEEK_END、FAST_SCAN或LOCKED状态，但绑定关系被解除，就立即返回发现模式
         return true;
     }
 
@@ -444,7 +465,7 @@ bool receiver_antenna_service_schedule(void)
         {
             return false;
         }
-        receiver_antenna_advance();
+        receiver_antenna_advance();		//前进到下一路天线
         if (m_antenna.round >= RF1662_SEEK_END_ROUNDS)
         {
             m_antenna.round = 0u;                       // 未找到END则继续下一批
@@ -454,12 +475,15 @@ bool receiver_antenna_service_schedule(void)
                 m_antenna.request_attempts = 0u;
             }
         }
+		
+		//将RF1662切到下一路，并监听8 ms
         receiver_radio_select_antenna(m_antenna.antenna);
         m_antenna.deadline_ms = now + RF1662_SEEK_END_DWELL_MS;
         return true;
     }
 
     /* FAST_SCAN：每个驻留窗口结束时，归档本路有效样本和RSSI。 */
+	/* 当TX回复0x11后，说明TX已经进入快速SN广播阶段。RX开始逐路统计信号质量。*/
     if (m_antenna.state == ANTENNA_STATE_FAST_SCAN)
     {
         if ((int32_t)(now - m_antenna.deadline_ms) < 0)
@@ -467,10 +491,16 @@ bool receiver_antenna_service_schedule(void)
             return false;
         }
 
+		/* 
+		- window_total：当前天线收到的所有无线包数量。
+		- window_valid：CRC正确、SN匹配、命令为0x05的有效广播数量。
+		- window_rssi_sum：有效广播包RSSI幅值之和。
+		保存当前天线的统计结果
+		*/
         m_antenna.valid_count[m_antenna.antenna] += m_antenna.window_valid;
         m_antenna.rssi_sum[m_antenna.antenna] += m_antenna.window_rssi_sum;
-        receiver_antenna_reset_window();
-        receiver_antenna_advance();
+        receiver_antenna_reset_window();            //清空窗口统计
+        receiver_antenna_advance();					//切换到下一路
 
         if (m_antenna.round < RF1662_FAST_SCAN_ROUNDS)
         {
@@ -479,13 +509,28 @@ bool receiver_antenna_service_schedule(void)
         }
         else
         {
+			/*
+				计算每路天线的平均RSSI。
+				优先选择样本数达到2个以上的天线。
+				信号强度更好的排在前面。
+				最多保留3路候选天线。
+			*/
             receiver_antenna_build_candidates();
+			
             if (m_antenna.candidate_count != 0u)
             {
+				/*
+					状态切换为LOCKED。切换到第一候选天线。清空图片重组状态。
+					清空旧无线包队列。初始化链路监测时间。清零连续失败帧数。
+				*/
                 receiver_antenna_lock(0u);
             }
             else
             {
+				/*
+					说明12路天线在正式扫描阶段都没有收到目标胶囊的有效SN广播。
+					此时无法选出天线，因此重新进入SEEK_END，再次寻找END并重新协商。
+				*/
                 NRF_LOG_WARNING("[SCAN] formal scan has no valid SN samples");
                 m_antenna.request_pending = true;
                 m_antenna.request_attempts = 0u;
@@ -496,6 +541,10 @@ bool receiver_antenna_service_schedule(void)
     }
 
     /* LOCKED：任一失联条件成立时先试下一候选，候选耗尽再重新协商。 */
+	/*  1.	长时间没收到目标胶囊的数据包   1500ms
+		2.  长时间没有完整图片             4000ms
+		3.  连续失败图片过多               3帧
+	*/
     if ((m_antenna.state == ANTENNA_STATE_LOCKED) &&
         (((uint32_t)(now - m_antenna.last_target_packet_ms) >=
           RF1662_TARGET_PACKET_TIMEOUT_MS) ||
@@ -508,7 +557,9 @@ bool receiver_antenna_service_schedule(void)
                         (unsigned)(now - m_antenna.last_target_packet_ms),
                         (unsigned)(now - m_antenna.last_complete_image_ms),
                         (unsigned)m_antenna.failed_frame_count);
-        receiver_image_reset();
+        receiver_image_reset();                       //清除未完成图片
+						
+		/*还有下一候选天线*/
         if ((uint8_t)(m_antenna.candidate_index + 1u) <
             m_antenna.candidate_count)
         {
@@ -516,6 +567,7 @@ bool receiver_antenna_service_schedule(void)
         }
         else
         {
+			/* 如果前三个候选全部失败，说明胶囊位置或无线环境可能已经明显变化。*/
             NRF_LOG_WARNING("[LINK] all candidates exhausted; seek END again");
             m_antenna.request_pending = true;
             m_antenna.request_attempts = 0u;
@@ -608,8 +660,10 @@ bool receiver_antenna_try_fast_scan_request(uint8_t image_id,
         m_antenna.request_pending = false;
         return false;
     }
+	//发送0x12，请求TX暂停图片并进入快速SN广播窗口。
     receiver_antenna_send_fast_scan_request(image_id, capsule_sn);
-    m_antenna.hold_until_ms = receiver_timebase_now_ms() + 150u;
+    m_antenna.hold_until_ms = receiver_timebase_now_ms() +
+                              RF1662_SCAN_REQUEST_HOLD_MS;
     return true;
 }
 

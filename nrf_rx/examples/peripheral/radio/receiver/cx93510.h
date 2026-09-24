@@ -12,12 +12,10 @@
 
 typedef struct
 {
-    /* 0x40块：包含SOI、DQT、DHT、EOI，正常长度为688字节。 */
-    uint32_t config_offset;
-    uint16_t config_size;
-    /* 0x10块：包含SOI、SOF0、SOS、压缩图像数据、EOI。 */
-    uint32_t jpeg_offset;
-    uint16_t jpeg_size;
+    uint32_t config_offset; /** 0x40配置块在帧缓冲中的字节偏移。 */
+    uint16_t config_size;   /** 0x40配置块长度，包含SOI、DQT、DHT和EOI。 */
+    uint32_t jpeg_offset;   /** 0x10图像块在帧缓冲中的字节偏移。 */
+    uint16_t jpeg_size;     /** 0x10图像块长度，包含SOI、SOF0、SOS、压缩数据和EOI。 */
 } cx93510_frame_info_t;
 
 /**

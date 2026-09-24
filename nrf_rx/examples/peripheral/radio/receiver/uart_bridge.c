@@ -34,36 +34,36 @@
 
 typedef struct
 {
-    uint8_t ring[UART_RX_BUFFER_SIZE];
-    volatile uint16_t ring_head;
-    volatile uint16_t ring_tail;
-    uint8_t packet[UART_RX_PACKET_MAX_SIZE];
-    uint32_t packet_length;
-    uint32_t packet_overflow;
-    volatile bool packet_active;
-    volatile bool idle_timeout;
-    volatile uint32_t received_bytes;
-    volatile uint32_t dropped_bytes;
-    volatile uint32_t errors;
+    uint8_t ring[UART_RX_BUFFER_SIZE];                   /** UART中断到主循环的接收环形缓冲区。 */
+    volatile uint16_t ring_head;                        /** 主循环读取环形缓冲区的位置。 */
+    volatile uint16_t ring_tail;                        /** UART中断写入环形缓冲区的位置。 */
+    uint8_t packet[UART_RX_PACKET_MAX_SIZE];            /** 按静默间隔组装的UART数据包缓冲区。 */
+    uint32_t packet_length;                             /** 当前UART数据包已组装长度，单位字节。 */
+    uint32_t packet_overflow;                           /** 当前UART数据包超出缓冲区的字节数。 */
+    volatile bool packet_active;                        /** 当前是否正在接收一个UART数据包。 */
+    volatile bool idle_timeout;                         /** UART静默超时是否已经到达。 */
+    volatile uint32_t received_bytes;                   /** UART累计接收字节数。 */
+    volatile uint32_t dropped_bytes;                    /** 环形缓冲区满时累计丢弃字节数。 */
+    volatile uint32_t errors;                           /** UART累计通信错误次数。 */
 
-    uint8_t image_frame[STM_IMAGE_FRAME_MAX_SIZE];
-    uint32_t image_length;
-    uint32_t image_offset;
-    uint16_t jpeg_length;
-    uint8_t image_id;
-    volatile bool image_waiting_tx_empty;
-    volatile bool image_tx_complete_due;
+    uint8_t image_frame[STM_IMAGE_FRAME_MAX_SIZE];      /** 发往STM的完整图片协议帧缓冲区。 */
+    uint32_t image_length;                              /** 待发送图片协议帧总长度，单位字节。 */
+    uint32_t image_offset;                              /** 图片协议帧当前已提交发送的偏移量。 */
+    uint16_t jpeg_length;                               /** 当前图片协议帧中的JPEG长度。 */
+    uint8_t image_id;                                   /** 当前待发送图片的帧ID。 */
+    volatile bool image_waiting_tx_empty;               /** 图片分块是否正在等待UART发送完成。 */
+    volatile bool image_tx_complete_due;                /** ISR是否已挂起图片分块发送完成事件。 */
 
-    uint8_t short_frame[LEGACY_CONTROL_FRAME_MAX_SIZE];
-    uint16_t short_length;
-    uint8_t short_command;
-    volatile bool short_waiting_tx_empty;
-    volatile bool short_tx_complete_due;
+    uint8_t short_frame[LEGACY_CONTROL_FRAME_MAX_SIZE]; /** 发往STM的短控制帧缓冲区。 */
+    uint16_t short_length;                              /** 待发送短控制帧长度，单位字节。 */
+    uint8_t short_command;                              /** 当前短控制帧的命令字。 */
+    volatile bool short_waiting_tx_empty;               /** 短控制帧是否正在等待UART发送完成。 */
+    volatile bool short_tx_complete_due;                /** ISR是否已挂起短控制帧发送完成事件。 */
 
-    bool control_response_seen;
-    uint8_t expected_control_response;
-    uint8_t pending_control[LEGACY_CONTROL_FRAME_MAX_SIZE];
-    uint16_t pending_control_length;
+    bool control_response_seen;                         /** 当前控制请求是否已收到首个有效响应。 */
+    uint8_t expected_control_response;                  /** 当前控制请求期望的无线响应命令字。 */
+    uint8_t pending_control[LEGACY_CONTROL_FRAME_MAX_SIZE]; /** 等待转发STM的控制响应帧。 */
+    uint16_t pending_control_length;                    /** 待转发控制响应帧长度，单位字节。 */
 } receiver_uart_state_t;
 
 static receiver_uart_state_t m_uart;
@@ -132,27 +132,60 @@ static uint8_t receiver_expected_response(uint8_t command)
 }
 
 /** @brief 从一次UART静默分包中查找并处理全部完整ZAYS控制帧。 */
+/*
+ * 处理流程：
+ *
+ *  UART静默数据块 data[0..length-1]
+ *                 │
+ *                 ▼
+ *       剩余数据够一个最小控制帧？ ──否──► 结束
+ *                 │是
+ *                 ▼
+ *       当前offset处是“ZAYS”帧头？ ──否──► offset加1后继续查找
+ *                 │是
+ *                 ▼
+ *       读取载荷长度并计算完整帧长度
+ *                 │
+ *                 ▼
+ *       长度、完整性和校验和均正确？ ──否──► 回复错误并结束本数据块
+ *                 │是
+ *                 ▼
+ *       ┌─────────命令类型──────────┐
+ *       │ 查询/绑定/解绑             │ 其他出厂配置命令
+ *       ▼                            ▼
+ *   RX本地处理并回复STM         记录期望应答并转发TX三次
+ *       │                            │
+ *       └────────────┬───────────────┘
+ *                    ▼
+ *             offset跨过完整帧
+ *                    │
+ *                    └──────────────► 继续查找下一帧
+ */
 static void receiver_control_handle_uart(const uint8_t *data,
                                          uint32_t length)
 {
-    uint32_t offset = 0u;
+    uint32_t offset = 0u;                              /** 当前搜索位置。 */
 
+    /* 剩余字节至少能容纳ZAYS、命令、长度和校验和时才继续解析。 */
     while ((length - offset) >= LEGACY_CONTROL_FRAME_MIN_SIZE)
     {
-        const uint8_t *frame = &data[offset];
-        uint16_t payload_length;
-        uint32_t frame_length;
+        const uint8_t *frame = &data[offset];           /** 当前候选帧起始地址。 */
+        uint16_t payload_length;                        /** 帧内声明的载荷长度。 */
+        uint32_t frame_length;                          /** 帧头、载荷和校验和总长度。 */
 
         /* 允许静默块前部有杂字节，逐字节重新寻找ZAYS帧头。 */
         if ((frame[0] != 0x5Au) || (frame[1] != 0x41u) ||
             (frame[2] != 0x59u) || (frame[3] != 0x53u))
         {
-            ++offset;
+            ++offset;                                  // 当前字节不是帧头，向后滑动一字节
             continue;
         }
 
+        /* frame[5..6]为大端载荷长度；固定开销为7字节头和1字节校验。 */
         payload_length = LegacyProtocol_GetU16Be(&frame[5]);
         frame_length = (uint32_t)payload_length + 8u;
+
+        /* 拒绝超长、静默块内数据不完整或载荷校验和错误的控制帧。 */
         if ((payload_length >
              (LEGACY_CONTROL_FRAME_MAX_SIZE - 8u)) ||
             (frame_length > LEGACY_CONTROL_FRAME_MAX_SIZE) ||
@@ -164,7 +197,7 @@ static void receiver_control_handle_uart(const uint8_t *data,
                                 (unsigned)offset);
             (void)receiver_control_send_uart(
                 LEGACY_CMD_CONTROL_ERROR_RESPONSE, NULL, 0u);
-            return;
+            return;                                    // 帧长不可信，无法安全寻找下一帧
         }
 
         CONTROL_LOG_INFO("[CTRL] UART RX cmd=0x%02x payload=%u",
@@ -174,6 +207,7 @@ static void receiver_control_handle_uart(const uint8_t *data,
         if ((frame[4] == LEGACY_CMD_SN_QUERY_REQUEST) &&
             (payload_length == 0u))
         {
+            /* 未绑定时返回全0 SN，保持查询响应始终携带固定8字节载荷。 */
             uint8_t empty_sn[LEGACY_CAPSULE_SN_SIZE] = {0};
             const uint8_t *sn = receiver_binding_is_bound() ?
                                 receiver_binding_get() : empty_sn;
@@ -185,6 +219,7 @@ static void receiver_control_handle_uart(const uint8_t *data,
         else if ((frame[4] == LEGACY_CMD_SN_UNBIND_REQUEST) &&
                  (payload_length == 0u))
         {
+            /* 清除RAM绑定并通知天线状态机返回未绑定发现流程。 */
             uint8_t result = receiver_binding_clear() ?
                              LEGACY_CONTROL_RESULT_OK :
                              LEGACY_CONTROL_RESULT_ERROR;
@@ -196,6 +231,7 @@ static void receiver_control_handle_uart(const uint8_t *data,
         else if ((frame[4] == LEGACY_CMD_SN_BIND_REQUEST) &&
                  (payload_length == LEGACY_CAPSULE_SN_SIZE))
         {
+            /* frame[7]开始是8字节SN；绑定后天线状态机转入SEEK_END。 */
             uint8_t result = receiver_binding_set(&frame[7]) ?
                              LEGACY_CONTROL_RESULT_OK :
                              LEGACY_CONTROL_RESULT_ERROR;
@@ -208,26 +244,49 @@ static void receiver_control_handle_uart(const uint8_t *data,
         else
         {
             /* 出厂配置命令转发TX，并只接受对应命令号的首个应答。 */
-            m_uart.control_response_seen = false;
+            m_uart.control_response_seen = false;       // 为新请求开放首个无线应答
             m_uart.expected_control_response =
                 receiver_expected_response(frame[4]);
             if (m_uart.expected_control_response == 0u)
             {
+                /* 未定义请求/应答映射时不占用无线链路，直接向STM报错。 */
                 (void)receiver_control_send_uart(
                     LEGACY_CMD_CONTROL_ERROR_RESPONSE, NULL, 0u);
             }
             else
             {
+                /* 无线重复发送三次提高TX收到出厂配置命令的概率。 */
                 CONTROL_LOG_INFO("[CTRL] Radio TX cmd=0x%02x repeat=3",
                                  (unsigned)frame[4]);
                 (void)receiver_radio_send(frame, (uint16_t)frame_length, 3u);
             }
         }
-        offset += frame_length;
+        offset += frame_length;                         // 跳过本帧，继续解析静默块剩余数据
     }
 }
 
 /** @brief UART中断回调：搬运接收字节并把DMA完成转换为主循环事件。 */
+/*
+ * 中断分流：
+ *
+ *                         UART事件
+ *                            │
+ *       ┌────────────────────┼─────────────────────┐
+ *       ▼                    ▼                     ▼
+ *  DATA_READY        COMM/FIFO_ERROR           TX_EMPTY
+ *       │                    │                     │
+ *       ▼                    ▼                     ▼
+ *  读空驱动RX FIFO       累计错误/丢包       判断完成的是哪类DMA
+ *       │                                          │
+ *       ▼                              ┌───────────┴───────────┐
+ *  写入软件ring[]                       ▼                       ▼
+ *  并刷新分包状态              image_waiting=true      short_waiting=true
+ *       │                              │                       │
+ *       ▼                              ▼                       ▼
+ *  协议解析留给主循环          image_complete_due=true short_complete_due=true
+ *
+ * ISR只搬字节、计数和置事件标志，不在中断中解析协议或启动下一段DMA。
+ */
 static void receiver_uart_event_handler(app_uart_evt_t *event)
 {
     if (event->evt_type == APP_UART_DATA_READY)
@@ -236,32 +295,32 @@ static void receiver_uart_event_handler(app_uart_evt_t *event)
         /* ISR只写环形缓冲，协议查找和业务处理留给主循环。 */
         while (app_uart_get(&byte) == NRF_SUCCESS)
         {
-            uint16_t tail = m_uart.ring_tail;
+            uint16_t tail = m_uart.ring_tail;           /** 本字节写入位置。 */
             uint16_t next = (uint16_t)((tail + 1u) & UART_RX_BUFFER_MASK);
-            ++m_uart.received_bytes;
-            m_uart.idle_timeout = false;
-            m_uart.packet_active = true;
+            ++m_uart.received_bytes;                    // 统计驱动实际交付的全部字节
+            m_uart.idle_timeout = false;                // 新字节到达，原静默超时失效
+            m_uart.packet_active = true;                // 标记正在组装一个UART静默数据块
             if (next != m_uart.ring_head)
             {
-                m_uart.ring[tail] = byte;
+                m_uart.ring[tail] = byte;               // 先写数据，再发布新的tail
                 m_uart.ring_tail = next;
             }
             else
             {
-                ++m_uart.dropped_bytes;
+                ++m_uart.dropped_bytes;                 // 保留一个空槽区分队列空和满
             }
         }
     }
     else if (event->evt_type == APP_UART_COMMUNICATION_ERROR)
     {
-        ++m_uart.errors;
+        ++m_uart.errors;                                // 记录奇偶、帧、溢出等硬件通信错误
         CONTROL_LOG_WARNING("[UART] communication error=0x%08x total=%u",
                             (unsigned)event->data.error_communication,
                             (unsigned)m_uart.errors);
     }
     else if (event->evt_type == APP_UART_FIFO_ERROR)
     {
-        ++m_uart.dropped_bytes;
+        ++m_uart.dropped_bytes;                         // SDK FIFO无法接纳数据，按丢字节统计
         CONTROL_LOG_WARNING("[UART] FIFO error=%u dropped=%u",
                             (unsigned)event->data.error_code,
                             (unsigned)m_uart.dropped_bytes);
@@ -271,11 +330,11 @@ static void receiver_uart_event_handler(app_uart_evt_t *event)
         /* 这里只置完成标志，不能在中断中启动下一段DMA。 */
         if (m_uart.image_waiting_tx_empty)
         {
-            m_uart.image_tx_complete_due = true;
+            m_uart.image_tx_complete_due = true;        // 主循环回收图片块并启动下一块
         }
         else if (m_uart.short_waiting_tx_empty)
         {
-            m_uart.short_tx_complete_due = true;
+            m_uart.short_tx_complete_due = true;        // 主循环回收短控制帧状态
         }
     }
 }
@@ -355,8 +414,26 @@ void receiver_uart_init(void)
 }
 
 /** @brief 主循环搬空RX环形缓冲，并在静默到期后解析一个数据块。 */
+/* 
+阶段一：搬数据
+UART RX环形缓冲区 → packet连续缓冲区
+
+阶段二：判定一包结束
+连续100 ms没有新字节 → 调用协议解析函数
+*/
 bool receiver_uart_rx_service(void)
 {
+	/*
+	worked
+	表示本轮是否完成了工作，例如：
+	- 从环形缓冲区搬走了字节。
+	- 完成并解析了一个数据块。
+	主循环根据这个返回值判断是否还有任务在运行。
+	complete
+	表示本轮是否确认一个UART静默数据块已经结束，可以开始解析。
+	head
+	把共享的读指针复制到局部变量，搬运期间先使用局部变量前进，最后一次性更新：
+	*/
     bool worked = false;
     bool complete = false;
     uint16_t head = m_uart.ring_head;
@@ -406,6 +483,34 @@ bool receiver_uart_rx_service(void)
 }
 
 /** @brief 处理无线侧扫描通知、SN广播和TX控制应答。 */
+/* 
+收到无线包
+    │
+    ├── packet == NULL
+    │       └── 返回false
+    │
+    ├── 命令0x11
+    │       ├── 校验绑定SN
+    │       ├── 挂起FAST_SCAN事件
+    │       └── 返回true
+    │
+    ├── 命令0x05
+    │       ├── 未绑定：SN上报STM
+    │       ├── 已绑定：只刷新匹配SN
+    │       └── 返回true
+    │
+    ├── 不是ZAYS
+    │       └── 返回false，交给图片模块
+    │
+    └── 是ZAYS
+            ├── 检查载荷长度
+            ├── 检查校验和
+            ├── 检查响应命令
+            ├── 过滤重复响应
+            ├── UART空闲：立即发送STM
+            ├── UART繁忙：暂存等待
+            └── 返回true
+*/
 bool receiver_control_handle_radio_packet(const uint8_t *packet)
 {
     uint16_t payload_length;
@@ -429,12 +534,14 @@ bool receiver_control_handle_radio_packet(const uint8_t *packet)
             CONTROL_LOG_INFO("[DISCOVERY] SN received on ANT%u:",
                              (unsigned)(rf1662_get_antenna() + 1u));
             NRF_LOG_HEXDUMP_INFO(&packet[1], LEGACY_CAPSULE_SN_SIZE);
-            receiver_antenna_note_discovery_sn();
-            receiver_image_update_capsule_sn(&packet[1]);
+            receiver_antenna_note_discovery_sn();				//发现SN后，暂时不立即切到下一路天线。
+            receiver_image_update_capsule_sn(&packet[1]);		//更新图片模块的SN缓存
             if (receiver_uart_image_tx_busy())
             {
+				//如果UART正在向STM发送一整幅图片，当前实现不打断图片DMA发送。
                 CONTROL_LOG_WARNING("[DISCOVERY] SN not sent: image UART busy");
             }
+			//无线侧的0x05包不能直接原样发给STM，需要封装成ZAYS控制帧。
             else if (receiver_control_send_uart(
                          LEGACY_CMD_CAPSULE_SN_BROADCAST,
                          &packet[1], LEGACY_CAPSULE_SN_SIZE))
@@ -466,6 +573,8 @@ bool receiver_control_handle_radio_packet(const uint8_t *packet)
     payload_length = LegacyProtocol_GetU16Be(&packet[5]);
     if (payload_length > (LEGACY_CONTROL_FRAME_MAX_SIZE - 8u))
     {
+		//格式错误的ZAYS帧
+		//属于控制类数据，只是内容非法；不能再把它当作图片包处理。
         return true;
     }
     frame_length = (uint16_t)(payload_length + 8u);
@@ -486,14 +595,21 @@ bool receiver_control_handle_radio_packet(const uint8_t *packet)
                             (unsigned)packet[4]);
         return true;
     }
+	
+	/*
+		发送新控制请求时会先设置：
+		m_uart.control_response_seen = false;
+		收到第一个合法响应后设置为：true
+		后面相同的无线重发就全部忽略。
+	*/
     if (m_uart.control_response_seen)
     {
         CONTROL_LOG_INFO("[CTRL] duplicate response cmd=0x%02x ignored",
                          (unsigned)packet[4]);
         return true;
     }
-
     m_uart.control_response_seen = true;
+	
     /* 图片DMA不可打断，控制应答暂存一帧，待图片发送完成后补发。 */
     if (receiver_uart_image_tx_busy())
     {
@@ -512,10 +628,32 @@ bool receiver_control_handle_radio_packet(const uint8_t *packet)
 }
 
 /** @brief 回收短帧DMA状态，并在UART空闲时补发排队的控制应答。 */
+/*
+短控制帧DMA完成了吗？
+    ├─ 是 → 清理短帧发送状态
+    │
+    └─ 否
+        ↓
+有暂存控制响应吗？
+    ├─ 否 → 返回
+    │
+    └─ 是
+        ↓
+UART是否还在发送图片或短帧？
+    ├─ 是 → 继续等待
+    │
+    └─ 否 → 启动控制响应DMA发送
+*/
 bool receiver_uart_control_service(void)
 {
+
+	//短帧DMA完成状态
     if (m_uart.short_tx_complete_due)
     {
+		/*
+			short_waiting_tx_empty：DMA已启动，正在等待完成。
+			short_tx_complete_due：DMA已经完成，等待主循环清理状态。
+		*/
         m_uart.short_tx_complete_due = false;
         m_uart.short_waiting_tx_empty = false;
         CONTROL_LOG_INFO("[UART] short frame TX complete cmd=0x%02x bytes=%u",
@@ -525,11 +663,14 @@ bool receiver_uart_control_service(void)
         return true;
     }
 
+	//检查排队的控制响应
     if ((m_uart.pending_control_length == 0u) ||
         receiver_uart_image_tx_busy())
     {
         return false;
     }
+
+	//UART空闲后补发
     if (receiver_uart_send(m_uart.pending_control,
                            m_uart.pending_control_length))
     {
@@ -634,6 +775,24 @@ bool receiver_uart_image_tx_busy(void)
 }
 
 /** @brief 非阻塞推进图片UART发送，每轮最多启动一个DMA块。 */
+/* 图片排队
+image_length > 0
+image_offset = 0
+        ↓
+主循环启动第1块DMA
+        ↓
+image_waiting_tx_empty = true
+        ↓
+UART发送完成中断
+        ↓
+image_tx_complete_due = true
+        ↓
+主循环确认完成
+        ↓
+还有数据？
+   ├─ 是 → 启动下一块
+   └─ 否 → 整幅图片发送完成，释放状态
+*/
 bool receiver_uart_tx_service(void)
 {
     uint32_t remaining;
@@ -643,6 +802,8 @@ bool receiver_uart_tx_service(void)
     /* TX_EMPTY表示上一块已经发完；最后一块完成时关闭整帧事务。 */
     if (m_uart.image_tx_complete_due)
     {
+		//上一块已经完成
+		//当前不再等待TX_EMPTY
         m_uart.image_tx_complete_due = false;
         m_uart.image_waiting_tx_empty = false;
         if ((m_uart.image_length != 0u) &&
@@ -656,6 +817,8 @@ bool receiver_uart_tx_service(void)
         }
     }
 
+	//正在等待上一块完成          m_uart.image_waiting_tx_empty  =1
+	//当前没有排队图片 image_length 
     if (m_uart.image_waiting_tx_empty || (m_uart.image_length == 0u))
     {
         return false;
@@ -665,6 +828,12 @@ bool receiver_uart_tx_service(void)
     remaining = m_uart.image_length - m_uart.image_offset;
     chunk = (remaining > UART_TX_DMA_CHUNK_SIZE) ?
             (uint16_t)UART_TX_DMA_CHUNK_SIZE : (uint16_t)remaining;
+	/*
+	关闭中断的目的是让以下操作成为一个不可分割的整体：
+	启动DMA
+	更新image_offset
+	设置image_waiting_tx_empty
+	*/
     __disable_irq();
     result = app_uart_tx_buffer(&m_uart.image_frame[m_uart.image_offset],
                                 chunk);

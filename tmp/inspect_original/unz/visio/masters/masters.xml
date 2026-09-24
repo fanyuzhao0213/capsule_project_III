@@ -1,0 +1,72 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<Masters xmlns='http://schemas.microsoft.com/office/visio/2012/main' xmlns:r='http://schemas.openxmlformats.org/officeDocument/2006/relationships' xml:space='preserve'><Master ID='2' NameU='Start/End' IsCustomNameU='1' Name='开始/结束' IsCustomName='1' Prompt='拖到绘图页后，可以表示程序流的开始点或结束点。' IconSize='1' AlignName='2' MatchByName='0' IconUpdate='1' UniqueID='{28793621-0006-0000-8E40-00608CF305B2}' BaseID='{2260FB21-E7DE-4F61-949E-679548813B45}' PatternFlags='0' Hidden='0' MasterType='2'><PageSheet LineStyle='0' FillStyle='0' TextStyle='0'><Cell N='PageWidth' V='4' U='MM'/><Cell N='PageHeight' V='4' U='MM'/><Cell N='ShdwOffsetX' V='0.1181102362204724' U='MM'/><Cell N='ShdwOffsetY' V='-1.377952755905512' U='MM'/><Cell N='PageScale' V='0.03937007874015748' U='MM'/><Cell N='DrawingScale' V='0.03937007874015748' U='MM'/><Cell N='DrawingSizeType' V='4'/><Cell N='DrawingScaleType' V='0'/><Cell N='InhibitSnap' V='0'/><Cell N='PageLockReplace' V='0' U='BOOL'/><Cell N='PageLockDuplicate' V='0' U='BOOL'/><Cell N='UIVisibility' V='0'/><Cell N='ShdwType' V='0'/><Cell N='ShdwObliqueAngle' V='0'/><Cell N='ShdwScaleFactor' V='1'/><Cell N='DrawingResizeType' V='1'/><Cell N='PrintPageOrientation' V='0'/><Cell N='PaperKind' V='0'/><Cell N='ShapeKeywords' V='终结符,停止,开始,结束,初始,完成,起始,程序,流程,基本,流程图,信息,数据,业务,流程,六,6,六西格玛,iSO,9000'/><Section N='Layer'><Row IX='0'><Cell N='Name' V='流程图'/><Cell N='Color' V='255'/><Cell N='Status' V='0'/><Cell N='Visible' V='1'/><Cell N='Print' V='1'/><Cell N='Active' V='0'/><Cell N='Lock' V='0'/><Cell N='Snap' V='1'/><Cell N='Glue' V='1'/><Cell N='NameUniv' V='Flowchart'/><Cell N='ColorTrans' V='0' F='No Formula'/></Row></Section></PageSheet><Icon>
+AAABAAEAICAQAAAAAADoAgAAFgAAACgAAAAgAAAAQAAAAAEABAAAAAAAgAIAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAACAAACAAAAAgIAAgAAAAIAAgACAgAAAgICAAMDAwAAAAP8AAP8AAAD//wD/AAAA/w
+D/AP//AAD///8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+Hd3d3d3d3d3d3cAAAAAAP///////////////wAAAA/////////////////wAACP//////////////
+///wAA//////////////////8AAP//////////////////cAD//////////////////3AA///////
+///////////8AAI/////////////////4AAAP////////////////8AAAAI//////////////+AAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAD/////////////////////////////////////////////////////8AAAL+AAAA/AAAAHgAAA
+AYAAAAHAAAABgAAAAYAAAAHAAAABwAAAA+AAAAf4AAAf/////////////////////////////////
+////////////////////w==</Icon><Rel r:id='rId1'/></Master><Master ID='4' NameU='Process' IsCustomNameU='1' Name='流程' IsCustomName='1' Prompt='将此形状拖到绘图页上。' IconSize='1' AlignName='2' MatchByName='0' IconUpdate='1' UniqueID='{28793057-0002-0000-8E40-00608CF305B2}' BaseID='{15A50647-7503-42A7-8B21-76CD97299D15}' PatternFlags='0' Hidden='0' MasterType='2'><PageSheet LineStyle='0' FillStyle='0' TextStyle='0'><Cell N='PageWidth' V='4' U='MM'/><Cell N='PageHeight' V='4' U='MM'/><Cell N='ShdwOffsetX' V='0.1181102362204724' U='MM'/><Cell N='ShdwOffsetY' V='-1.377952755905512' U='MM'/><Cell N='PageScale' V='0.03937007874015748' U='MM'/><Cell N='DrawingScale' V='0.03937007874015748' U='MM'/><Cell N='DrawingSizeType' V='4'/><Cell N='DrawingScaleType' V='0'/><Cell N='InhibitSnap' V='0'/><Cell N='PageLockReplace' V='0' U='BOOL'/><Cell N='PageLockDuplicate' V='0' U='BOOL'/><Cell N='UIVisibility' V='0'/><Cell N='ShdwType' V='0'/><Cell N='ShdwObliqueAngle' V='0'/><Cell N='ShdwScaleFactor' V='1'/><Cell N='DrawingResizeType' V='1'/><Cell N='PrintPageOrientation' V='0'/><Cell N='PaperKind' V='0'/><Cell N='ShapeKeywords' V='流程,函数,过程,动作,任务,基本,流程图,流程,数据,业务,六,6,六西格玛,iSO,9000'/><Section N='Layer'><Row IX='0'><Cell N='Name' V='流程图'/><Cell N='Color' V='255'/><Cell N='Status' V='0'/><Cell N='Visible' V='1'/><Cell N='Print' V='1'/><Cell N='Active' V='0'/><Cell N='Lock' V='0'/><Cell N='Snap' V='1'/><Cell N='Glue' V='1'/><Cell N='NameUniv' V='Flowchart'/><Cell N='ColorTrans' V='0' F='No Formula'/></Row></Section></PageSheet><Icon>
+AAABAAEAICAQAAAAAADoAgAAFgAAACgAAAAgAAAAQAAAAAEABAAAAAAAgAIAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAACAAACAAAAAgIAAgAAAAIAAgACAgAAAgICAAMDAwAAAAP8AAP8AAAD//wD/AAAA/w
+D/AP//AAD///8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAB3d3d3d3d3d3d3d3d3dwAA//////////////////9wAP//////////////////cAD//
+////////////////3AA//////////////////9wAP//////////////////cAD///////////////
+///3AA//////////////////9wAP//////////////////cAD//////////////////3AA///////
+///////////9wAP//////////////////cAD//////////////////3AA//////////////////9w
+AP//////////////////cAD//////////////////3AA//////////////////9wAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAD/////////////////////////////////////gAAAAcAAAAHAAAABwAAAAcAAAAHAAAABwAAA
+AcAAAAHAAAABwAAAAcAAAAHAAAABwAAAAcAAAAHAAAABwAAAAcAAAAGAAAAB/////////////////
+////////////////////w==</Icon><Rel r:id='rId2'/></Master><Master ID='5' NameU='Decision' IsCustomNameU='1' Name='判定' IsCustomName='1' Prompt='将此形状拖到绘图页上。' IconSize='1' AlignName='2' MatchByName='0' IconUpdate='1' UniqueID='{2879323B-0004-0000-8E40-00608CF305B2}' BaseID='{7813AA6D-FF4D-4795-B39A-7FF08597892B}' PatternFlags='0' Hidden='0' MasterType='2'><PageSheet LineStyle='0' FillStyle='0' TextStyle='0'><Cell N='PageWidth' V='4' U='MM'/><Cell N='PageHeight' V='4' U='MM'/><Cell N='ShdwOffsetX' V='0.1181102362204724' U='MM'/><Cell N='ShdwOffsetY' V='-1.377952755905512' U='MM'/><Cell N='PageScale' V='0.03937007874015748' U='MM'/><Cell N='DrawingScale' V='0.03937007874015748' U='MM'/><Cell N='DrawingSizeType' V='4'/><Cell N='DrawingScaleType' V='0'/><Cell N='InhibitSnap' V='0'/><Cell N='PageLockReplace' V='0' U='BOOL'/><Cell N='PageLockDuplicate' V='0' U='BOOL'/><Cell N='UIVisibility' V='0'/><Cell N='ShdwType' V='0'/><Cell N='ShdwObliqueAngle' V='0'/><Cell N='ShdwScaleFactor' V='1'/><Cell N='DrawingResizeType' V='1'/><Cell N='PrintPageOrientation' V='0'/><Cell N='PaperKind' V='0'/><Cell N='ShapeKeywords' V='判定,是/否,流程图,基本,信息,流程,数据,业务,流程,六,6,六西格玛,iSO,9000'/><Section N='Layer'><Row IX='0'><Cell N='Name' V='流程图'/><Cell N='Color' V='255'/><Cell N='Status' V='0'/><Cell N='Visible' V='1'/><Cell N='Print' V='1'/><Cell N='Active' V='0'/><Cell N='Lock' V='0'/><Cell N='Snap' V='1'/><Cell N='Glue' V='1'/><Cell N='NameUniv' V='Flowchart'/><Cell N='ColorTrans' V='0' F='No Formula'/></Row></Section></PageSheet><Icon>
+AAABAAEAICAQAAAAAADoAgAAFgAAACgAAAAgAAAAQAAAAAEABAAAAAAAgAIAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAACAAACAAAAAgIAAgAAAAIAAgACAgAAAgICAAMDAwAAAAP8AAP8AAAD//wD/AAAA/w
+D/AP//AAD///8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAj/gAAAAAAAAAAAAAAAAAf///9wAAAAAAAAAAA
+AAACP/////wAAAAAAAAAAAACP///////4AAAAAAAAAAB///////////cAAAAAAAAI////////////
+8AAAAAAI//////////////+AAAAH/////////////////3AAAI////////////////8AAAAA/////
+/////////9wAAAAAAj///////////+AAAAAAAAACP////////+AAAAAAAAAAAAP///////3AAAAAA
+AAAAAAAA/////4AAAAAAAAAAAAAAAAj//4AAAAAAAAAAAAAAAAAAD/cAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAD///////////////////////////////////////6////4H///4Af//8AF//8AAP/8AAA/+AAA
+L+AAAAeAAAABwAAAAegAAAf4AAAf/gAAP/9AAP//0AP///AP///6H////n///////////////////
+////////////////////w==</Icon><Rel r:id='rId3'/></Master><Master ID='8' NameU='Dynamic connector' IsCustomNameU='1' Name='动态连接线' IsCustomName='1' Prompt='T' IconSize='1' AlignName='2' MatchByName='1' IconUpdate='0' UniqueID='{002A9503-0000-0000-8E40-00608CF305B2}' BaseID='{F7290A45-E3AD-11D2-AE4F-006008C9F5A9}' PatternFlags='0' Hidden='0' MasterType='0'><PageSheet LineStyle='0' FillStyle='0' TextStyle='0'><Cell N='PageWidth' V='3.937007874015748'/><Cell N='PageHeight' V='3.937007874015748'/><Cell N='ShdwOffsetX' V='0.1181102362204724'/><Cell N='ShdwOffsetY' V='-0.1181102362204724'/><Cell N='PageScale' V='0.03937007874015748' U='MM'/><Cell N='DrawingScale' V='0.03937007874015748' U='MM'/><Cell N='DrawingSizeType' V='4'/><Cell N='DrawingScaleType' V='0'/><Cell N='InhibitSnap' V='0'/><Cell N='PageLockReplace' V='0' U='BOOL'/><Cell N='PageLockDuplicate' V='0' U='BOOL'/><Cell N='UIVisibility' V='0'/><Cell N='ShdwType' V='0'/><Cell N='ShdwObliqueAngle' V='0'/><Cell N='ShdwScaleFactor' V='1'/><Cell N='DrawingResizeType' V='0'/><Section N='Layer'><Row IX='0'><Cell N='Name' V='连接线'/><Cell N='Color' V='255'/><Cell N='Status' V='0'/><Cell N='Visible' V='1'/><Cell N='Print' V='1'/><Cell N='Active' V='0'/><Cell N='Lock' V='0'/><Cell N='Snap' V='1'/><Cell N='Glue' V='1'/><Cell N='NameUniv' V='Connector'/><Cell N='ColorTrans' V='0'/></Row></Section></PageSheet><Icon>
+AAABAAEAICAQAAAAAADoAgAAFgAAACgAAAAgAAAAQAAAAAEABAAAAAAAgAIAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAACAAACAAAAAgIAAgAAAAIAAgACAgAAAgICAAMDAwAAAAP8AAP8AAAD//wD/AAAA/w
+D/AP//AAD///8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAeHh4eAAAAAAAAAAAAAAAAIAAAAcAAAAAAAAAAAAAADNzMzAIAAAAAAAAAAAAAAAAAAAwBw
+AAAAAAAAAAAAAw///wMAgAAAAAAAAAAAAHgP//8IeHh4eHh4eHAAAACAD/n/AwCAAAAAAACAAAAAc
+ACZkAAAcAAAAAAAcAAAAIAACTAAAIAAAAAAAIAAAABwAAAAAABwAAAAAABwAAAAgAAAMAAAgAAAAA
+AAgAAAAHAAADMzM3MzMzMAAHAAAACAAAAAAAAAAAADAACAAAAAcAAAAAAAcAAAAwAAcAAAAIAAAAA
+AAIAAAAMAAIAAAABwAAAAAABwAAADAABwAAAAgAAAAAAAgAAAAwAAgAAAAHAAAAAAAHAAM5MzMHAA
+AACAAAAAAACAAAmZADCAAAAAcAAAAAAAcAD/n/AwcAAAAIeHh4eHh4eA///wh4AAAAAAAAAAAABwA
+P//8DAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAHAAAHAAAAAAAAAAAAAAAACAAACAAAAAAAAAAA
+AAAAAAeHh4cAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAD/////////////////gH///79///4Df//8A3//+AN///AAAAf0A3/39Ad/9/eff/f3H3/3959/
+9/eAAPf3gAD39/989/f/fPf3/3z39/989/f/cBf3/2AX9/9gF/AAAAf//2Af//9gP///ff///33//
+/8B/////////////////w==</Icon><Rel r:id='rId4'/></Master><Master ID='9' NameU='Subprocess' IsCustomNameU='1' Name='子流程' IsCustomName='1' Prompt='拖到绘图页后，可以添加子流程或预先定义的流程。' IconSize='1' AlignName='2' MatchByName='0' IconUpdate='1' UniqueID='{2879344D-0005-0000-8E40-00608CF305B2}' BaseID='{7A104E34-8E84-4E4A-8A91-A6EEDDBFF75C}' PatternFlags='0' Hidden='0' MasterType='2'><PageSheet LineStyle='0' FillStyle='0' TextStyle='0'><Cell N='PageWidth' V='4' U='MM'/><Cell N='PageHeight' V='4' U='MM'/><Cell N='ShdwOffsetX' V='0.1181102362204724' U='MM'/><Cell N='ShdwOffsetY' V='-1.377952755905512' U='MM'/><Cell N='PageScale' V='0.03937007874015748' U='MM'/><Cell N='DrawingScale' V='0.03937007874015748' U='MM'/><Cell N='DrawingSizeType' V='4'/><Cell N='DrawingScaleType' V='0'/><Cell N='InhibitSnap' V='0'/><Cell N='PageLockReplace' V='0' U='BOOL'/><Cell N='PageLockDuplicate' V='0' U='BOOL'/><Cell N='UIVisibility' V='0'/><Cell N='ShdwType' V='0'/><Cell N='ShdwObliqueAngle' V='0'/><Cell N='ShdwScaleFactor' V='1'/><Cell N='DrawingResizeType' V='1'/><Cell N='PrintPageOrientation' V='0'/><Cell N='PaperKind' V='0'/><Cell N='ShapeKeywords' V='子流程,预先定义,流程,子例程,模块,基本,流程图,信息,流程,数据,业务,六,6,六西格玛,iSO,9000'/><Section N='Layer'><Row IX='0'><Cell N='Name' V='流程图'/><Cell N='Color' V='255'/><Cell N='Status' V='0'/><Cell N='Visible' V='1'/><Cell N='Print' V='1'/><Cell N='Active' V='0'/><Cell N='Lock' V='0'/><Cell N='Snap' V='1'/><Cell N='Glue' V='1'/><Cell N='NameUniv' V='Flowchart'/><Cell N='ColorTrans' V='0' F='No Formula'/></Row></Section></PageSheet><Icon>
+AAABAAEAICAQAAAAAADoAgAAFgAAACgAAAAgAAAAQAAAAAEABAAAAAAAgAIAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAACAAACAAAAAgIAAgAAAAIAAgACAgAAAgICAAMDAwAAAAP8AAP8AAAD//wD/AAAA/w
+D/AP//AAD///8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAB3B3d3d3d3d3d3d3dwdwAA/wj/////////////8P9wAP8I/////////////4D/cAD/C
+P/////////////w/3AA/wj/////////////8P9wAP8I//////////////D/cAD/CP////////////
++A/3AA/wj/////////////8P9wAP8I//////////////D/cAD/CP/////////////w/3AA/wj////
+/////////gP9wAP8I//////////////D/cAD/CP/////////////w/3AA/wj/////////////8P9w
+AP8I/////////////4D/cAD/CP/////////////w/3AA/wj/////////////8P9wAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAD/////////////////////////////////////gAAAAcAAAAHAAAABwAAAAcAAAAHAAAABwAAA
+AcAAAAHAAAABwAAAAcAAAAHAAAABwAAAAcAAAAHAAAABwAAAAcAAAAGAAAAB/////////////////
+////////////////////w==</Icon><Rel r:id='rId5'/></Master></Masters>

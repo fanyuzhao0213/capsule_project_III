@@ -227,6 +227,8 @@ bool receiver_radio_process_one(void)
     }
 
     head = m_radio.head;
+	/*  true：这个包属于控制类，已经处理完毕。
+		false：不是控制包，可以继续交给图片模块判断。*/
     if (!receiver_control_handle_radio_packet(m_radio.queue[head]))
     {
         receiver_image_process_packet(m_radio.queue[head]);

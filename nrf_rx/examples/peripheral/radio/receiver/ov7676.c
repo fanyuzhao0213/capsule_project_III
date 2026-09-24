@@ -32,9 +32,9 @@
 
 typedef struct
 {
-    uint16_t address;
-    uint8_t value;
-    uint8_t delay_ms;
+    uint16_t address;                                  /** OV7676寄存器地址。 */
+    uint8_t value;                                     /** 写入寄存器的配置值。 */
+    uint8_t delay_ms;                                  /** 写入该寄存器后的等待时间，单位ms。 */
 } ov7676_reg_t;
 
 /**

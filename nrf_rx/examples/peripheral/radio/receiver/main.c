@@ -34,21 +34,42 @@ static void receiver_rf_frontend_init(void)
     }
 }
 
+
+/* ========== 1. 基础硬件与时钟层（最先执行，无中断） ========== */
+static void receiver_platform_init(void)
+{
+    receiver_clock_init();      // 16 MHz 晶振
+    receiver_mode_pin_init();   // 收发模式控制脚
+    receiver_rf_frontend_init();// RF1662，默认 ANT1
+}
+
+/* ========== 2. 基础服务层（日志、时间基、绑定状态、图像） ========== */
+static void receiver_service_init(void)
+{
+    receiver_log_init();        // RTT 日志
+    receiver_binding_init();    // 清空 RAM 绑定状态
+    receiver_image_init();      // 图片模块状态
+    receiver_timebase_init();   // TIMER1 统一时间基
+}
+
+/* ========== 3. 通信外设启动层（会产生中断，必须最后启动） ========== */
+static void receiver_comm_init(void)
+{
+    receiver_uart_idle_capture_init(); // PPI 捕获
+    receiver_uart_init();              // 1 Mbps UART
+    receiver_radio_init();             // 2 Mbit/s Radio，开始接收
+    receiver_antenna_init();           // 天线管理器，进入未绑定发现状态
+}
+
+
+
 /** @brief 按硬件依赖关系初始化各模块。 */
 static void receiver_application_init(void)
 {
     /* 先准备基础硬件，再启动可能产生中断的UART、Radio和天线状态机。 */
-    receiver_clock_init();
-    receiver_log_init();
-    receiver_binding_init();
-    receiver_image_init();
-    receiver_rf_frontend_init();
-    receiver_mode_pin_init();
-    receiver_timebase_init();
-    receiver_uart_idle_capture_init();
-    receiver_uart_init();
-    receiver_radio_init();
-    receiver_antenna_init();
+	receiver_platform_init();   // 硬件
+    receiver_service_init();    // 服务
+    receiver_comm_init();       // 最后启动中断源
 
     NRF_LOG_INFO("RX ready: firmware=%u.%u.%u radio=%uMHz",
                  (unsigned)VERSION_MAIN, (unsigned)VERSION_SUB,

@@ -79,11 +79,14 @@
 /** 寻找END每批循环轮数；一批结束后仍未找到则继续下一批。 */
 #define RF1662_SEEK_END_ROUNDS        5u
 
+/** 捕获END并发送0x12后保持当前天线，等待TX接收请求和返回0x11。 */
+#define RF1662_SCAN_REQUEST_HOLD_MS   150u
+
 /** 至少收到2个目标CRC正确包，才把平均RSSI视为可靠的选路依据。 */
 #define RF1662_MIN_RSSI_SAMPLES       2u
 
-/** 协商成功后的密集SN扫描：12路×30ms×4轮=1440ms。 */
-#define RF1662_FAST_SCAN_DWELL_MS     30u
+/** 协商成功后的密集SN扫描：12路×32ms×4轮=1536ms；32ms与4ms服务节拍整除。 */
+#define RF1662_FAST_SCAN_DWELL_MS     32u
 #define RF1662_FAST_SCAN_ROUNDS       4u
 
 /** 固定接收阶段的分级失联判断。 */
