@@ -236,6 +236,9 @@ bool receiver_radio_process_one(void)
     m_radio.head = (uint8_t)((head + 1u) % RADIO_QUEUE_DEPTH);
     ++m_radio.processed;
 
+	/*
+	0x1F 是二进制低 5 位全为 1；m_radio.processed & 0x1F 为 0，表示已处理包数到了 32 的倍数，所以大约每处理 32 个无线包打印一次，避免逐包刷日志
+	*/
     if ((m_radio.processed & 0x1Fu) == 0u)
     {
         NRF_LOG_INFO("Bridge stats: radio_rx=%u processed=%u dropped=%u stm_pending=%u",
