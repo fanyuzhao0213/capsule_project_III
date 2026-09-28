@@ -9,6 +9,7 @@
 #include "app_uart.h"
 #include "binding_storage.h"
 #include "config.h"
+#include "control_stream_parser.h"
 #include "image.h"
 #include "legacy_protocol.h"
 #include "nrf.h"
@@ -64,6 +65,8 @@ typedef struct
     uint8_t expected_control_response;                  /** 当前控制请求期望的无线响应命令字。 */
     uint8_t pending_control[LEGACY_CONTROL_FRAME_MAX_SIZE]; /** 等待转发STM的控制响应帧。 */
     uint16_t pending_control_length;                    /** 待转发控制响应帧长度，单位字节。 */
+    uint8_t pending_antenna_test_acks;                  /** 相同的天线测试回包待发次数。 */
+    ReceiverControlStreamParser_t control_parser;       /** 跨UART静默数据块保存控制帧状态。 */
 } receiver_uart_state_t;
 
 static receiver_uart_state_t m_uart;
@@ -131,73 +134,48 @@ static uint8_t receiver_expected_response(uint8_t command)
     return 0u;
 }
 
-/** @brief 从一次UART静默分包中查找并处理全部完整ZAYS控制帧。 */
-/*
- * 处理流程：
- *
- *  UART静默数据块 data[0..length-1]
- *                 │
- *                 ▼
- *       剩余数据够一个最小控制帧？ ──否──► 结束
- *                 │是
- *                 ▼
- *       当前offset处是“ZAYS”帧头？ ──否──► offset加1后继续查找
- *                 │是
- *                 ▼
- *       读取载荷长度并计算完整帧长度
- *                 │
- *                 ▼
- *       长度、完整性和校验和均正确？ ──否──► 回复错误并结束本数据块
- *                 │是
- *                 ▼
- *       ┌─────────命令类型──────────┐
- *       │ 查询/绑定/解绑             │ 其他出厂配置命令
- *       ▼                            ▼
- *   RX本地处理并回复STM         记录期望应答并转发TX三次
- *       │                            │
- *       └────────────┬───────────────┘
- *                    ▼
- *             offset跨过完整帧
- *                    │
- *                    └──────────────► 继续查找下一帧
- */
+/** @brief 流式处理ZAYS控制帧，允许一帧跨多个UART静默数据块。 */
 static void receiver_control_handle_uart(const uint8_t *data,
                                          uint32_t length)
 {
-    uint32_t offset = 0u;                              /** 当前搜索位置。 */
+    uint32_t index;
 
-    /* 剩余字节至少能容纳ZAYS、命令、长度和校验和时才继续解析。 */
-    while ((length - offset) >= LEGACY_CONTROL_FRAME_MIN_SIZE)
+    for (index = 0u; index < length; ++index)
     {
-        const uint8_t *frame = &data[offset];           /** 当前候选帧起始地址。 */
-        uint16_t payload_length;                        /** 帧内声明的载荷长度。 */
-        uint32_t frame_length;                          /** 帧头、载荷和校验和总长度。 */
+        ReceiverControlStreamResult_t parse_result =
+            ReceiverControlStream_Feed(&m_uart.control_parser, data[index]);
+        const uint8_t *frame = m_uart.control_parser.frame;
+        uint16_t payload_length;
+        uint16_t frame_length;
 
-        /* 允许静默块前部有杂字节，逐字节重新寻找ZAYS帧头。 */
-        if ((frame[0] != 0x5Au) || (frame[1] != 0x41u) ||
-            (frame[2] != 0x59u) || (frame[3] != 0x53u))
+        if (parse_result == RECEIVER_CONTROL_STREAM_MORE)
         {
-            ++offset;                                  // 当前字节不是帧头，向后滑动一字节
+            continue;
+        }
+        if (parse_result == RECEIVER_CONTROL_STREAM_INVALID_LENGTH)
+        {
+            CONTROL_LOG_WARNING("[CTRL] UART invalid control length");
+            if (frame[4] != LEGACY_CMD_ANTENNA_TEST_REQUEST)
+            {
+                (void)receiver_control_send_uart(
+                    LEGACY_CMD_CONTROL_ERROR_RESPONSE, NULL, 0u);
+            }
             continue;
         }
 
-        /* frame[5..6]为大端载荷长度；固定开销为7字节头和1字节校验。 */
-        payload_length = LegacyProtocol_GetU16Be(&frame[5]);
-        frame_length = (uint32_t)payload_length + 8u;
-
-        /* 拒绝超长、静默块内数据不完整或载荷校验和错误的控制帧。 */
-        if ((payload_length >
-             (LEGACY_CONTROL_FRAME_MAX_SIZE - 8u)) ||
-            (frame_length > LEGACY_CONTROL_FRAME_MAX_SIZE) ||
-            (frame_length > (length - offset)) ||
-            (receiver_control_checksum(&frame[7], payload_length) !=
-             frame[frame_length - 1u]))
+        payload_length = (uint16_t)(m_uart.control_parser.expected - 8u);
+        frame_length = m_uart.control_parser.expected;
+        if (receiver_control_checksum(&frame[7], payload_length) !=
+            frame[frame_length - 1u])
         {
-            CONTROL_LOG_WARNING("[CTRL] UART invalid frame at offset=%u",
-                                (unsigned)offset);
-            (void)receiver_control_send_uart(
-                LEGACY_CMD_CONTROL_ERROR_RESPONSE, NULL, 0u);
-            return;                                    // 帧长不可信，无法安全寻找下一帧
+            CONTROL_LOG_WARNING("[CTRL] UART invalid control checksum");
+            if (frame[4] != LEGACY_CMD_ANTENNA_TEST_REQUEST)
+            {
+                (void)receiver_control_send_uart(
+                    LEGACY_CMD_CONTROL_ERROR_RESPONSE, NULL, 0u);
+            }
+            ReceiverControlStream_Reset(&m_uart.control_parser);
+            continue;
         }
 
         CONTROL_LOG_INFO("[CTRL] UART RX cmd=0x%02x payload=%u",
@@ -241,6 +219,27 @@ static void receiver_control_handle_uart(const uint8_t *data,
             (void)receiver_control_send_uart(
                 LEGACY_CMD_SN_BIND_RESPONSE, &result, 1u);
         }
+        else if (frame[4] == LEGACY_CMD_ANTENNA_TEST_REQUEST)
+        {
+            /* payload仅有一个ID；00启动、01～0C选路、0D停止。 */
+            if ((payload_length == 1u) &&
+                receiver_antenna_manual_command(frame[7]))
+            {
+                /* 回包完全相同，计数排队可避免图片DMA繁忙时丢应答。 */
+                if (m_uart.pending_antenna_test_acks < 0xFFu)
+                {
+                    ++m_uart.pending_antenna_test_acks;
+                }
+                else
+                {
+                    CONTROL_LOG_WARNING("[ANT TEST] response queue full");
+                }
+            }
+            else
+            {
+                CONTROL_LOG_WARNING("[ANT TEST] invalid id or length");
+            }
+        }
         else
         {
             /* 出厂配置命令转发TX，并只接受对应命令号的首个应答。 */
@@ -261,7 +260,7 @@ static void receiver_control_handle_uart(const uint8_t *data,
                 (void)receiver_radio_send(frame, (uint16_t)frame_length, 3u);
             }
         }
-        offset += frame_length;                         // 跳过本帧，继续解析静默块剩余数据
+        ReceiverControlStream_Reset(&m_uart.control_parser);
     }
 }
 
@@ -646,6 +645,9 @@ UART是否还在发送图片或短帧？
 */
 bool receiver_uart_control_service(void)
 {
+    static const uint8_t antenna_test_reply[8] =
+        {0x5Au, 0x41u, 0x59u, 0x53u,
+         LEGACY_CMD_ANTENNA_TEST_RESPONSE, 0x00u, 0x00u, 0x00u};
 
 	//短帧DMA完成状态
     if (m_uart.short_tx_complete_due)
@@ -663,9 +665,23 @@ bool receiver_uart_control_service(void)
         return true;
     }
 
+    if ((m_uart.short_length != 0u) || receiver_uart_image_tx_busy())
+    {
+        return false;
+    }
+
+    if (m_uart.pending_antenna_test_acks != 0u)
+    {
+        if (receiver_uart_send(antenna_test_reply, sizeof(antenna_test_reply)))
+        {
+            --m_uart.pending_antenna_test_acks;
+            return true;
+        }
+        return false;
+    }
+
 	//检查排队的控制响应
-    if ((m_uart.pending_control_length == 0u) ||
-        receiver_uart_image_tx_busy())
+    if (m_uart.pending_control_length == 0u)
     {
         return false;
     }
@@ -677,8 +693,9 @@ bool receiver_uart_control_service(void)
         CONTROL_LOG_INFO("[CTRL] queued response cmd=0x%02x sent",
                          (unsigned)m_uart.pending_control[4]);
         m_uart.pending_control_length = 0u;
+        return true;
     }
-    return true;
+    return false;
 }
 
 /** @brief 启动一帧连续短数据EasyDMA发送，缓冲保持到TX_EMPTY。 */

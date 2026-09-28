@@ -108,13 +108,19 @@
 /** @brief 图像转发命令：接收板将完整图像转发给 STM32 主控，再由 STM32 透传到 PC。 */
 #define LEGACY_CMD_IMAGE_FORWARD             0x81u
 
-/** PC 端到胶囊端的 ZAYS 控制帧命令。 */
+/** PC 端 ZAYS 控制帧命令：部分由 RX 本地处理，其余转发胶囊 TX。 */
 #define LEGACY_CMD_SN_QUERY_REQUEST           0x20u
 #define LEGACY_CMD_SN_QUERY_RESPONSE          0x21u
 #define LEGACY_CMD_SN_UNBIND_REQUEST          0x22u
 #define LEGACY_CMD_SN_UNBIND_RESPONSE         0x23u
 #define LEGACY_CMD_SN_BIND_REQUEST            0x24u
 #define LEGACY_CMD_SN_BIND_RESPONSE           0x25u
+/** PC经STM下发的RX本地天线测试命令，载荷为1字节测试ID。 */
+#define LEGACY_CMD_ANTENNA_TEST_REQUEST       0x2Cu
+/** 固定零载荷回包，字节值与既有通用错误应答0x49相同。 */
+#define LEGACY_CMD_ANTENNA_TEST_RESPONSE      0x49u
+#define LEGACY_ANTENNA_TEST_START             0x00u
+#define LEGACY_ANTENNA_TEST_STOP              0x0Du
 #define LEGACY_CMD_SN_PREPARE_REQUEST         0x40u
 #define LEGACY_CMD_SN_PREPARE_RESPONSE        0x41u
 #define LEGACY_CMD_DEVICE_ID_QUERY_REQUEST    0x42u

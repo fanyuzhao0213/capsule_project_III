@@ -41,6 +41,34 @@ STM不重新计算天线或RSSI。RX已经把当前天线和12路RSSI写入128�
 | 记录JPEG容量 | 19936 B | `capsule_protocol.c` | 20064−128；补标准头后的JPEG也不能超过此值 |
 | SD同步周期 | 每10帧 | `capsule_protocol.c` | 第10帧写完调用`f_sync()`；掉电可能丢失尚未同步的缓存记录 |
 
+### 2.1 协议模块状态所有权
+
+`capsule_protocol.c`不再维护散落的裸全局标志，所有可变运行状态统一收口到唯一上下文`m_protocol`：
+
+```text
+m_protocol
+├─ image_rx
+│  ├─ parser：PREAMBLE/LENGTH/BODY状态、长度和帧统计
+│  └─ frame：USART2图片整帧拼包缓存
+├─ nrf_control
+│  ├─ parser：nRF控制应答ZAYS拼包状态
+│  └─ pending_frame/pending_length：等待USART3空闲的单帧邮箱
+├─ pc_control
+│  └─ PC控制命令ZAYS拼包状态
+├─ pc_tx
+│  ├─ state：IDLE/HEADER/JPEG/DEVICE_INFO/CHECKSUM
+│  ├─ header/checksum/jpeg_length：当前发送事务参数
+│  └─ completed_events/error_events/completed_total：ISR与主循环事件交接
+├─ record
+│  ├─ data：20064字节.YS记录及USART3 DMA共享发送源
+│  ├─ rtc_available：最近一次RTC访问状态
+│  └─ records_since_sync：每10帧同步一次的节拍
+└─ stats
+   └─ 有效帧率、上一帧时间和DeviceInfo首帧日志状态
+```
+
+新增状态必须先确定所属子模块，再加入对应结构体；不得重新增加独立可变全局标志。大容量`image_rx.frame`和`record.data`为静态存储，不进入线程栈，也不使用动态内存。
+
 ## 3. 上电初始化流程
 
 ```text

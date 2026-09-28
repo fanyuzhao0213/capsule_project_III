@@ -33,6 +33,9 @@ bool receiver_antenna_on_radio_packet(const uint8_t *packet,
 /** @brief 绑定或解绑后重置对应天线策略。 */
 void receiver_antenna_binding_changed(void);
 
+/** @brief PC手动测试天线：00开始，01～0C选路，0D停止并恢复自动选路。 */
+bool receiver_antenna_manual_command(uint8_t test_id);
+
 /** @brief 处理主循环收到的0x11快速扫描通知。 */
 void receiver_antenna_fast_scan_granted(const uint8_t *sn);
 

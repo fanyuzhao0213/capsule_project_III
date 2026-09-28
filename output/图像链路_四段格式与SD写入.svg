@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="760" viewBox="0 0 1600 760" role="img" aria-labelledby="title desc">
+  <title id="title">图像链路四段格式与 SD 写入时机</title>
+  <desc id="desc">TX 使用固定 254 字节的 BEGIN、DATA、END 无线包；RX 发给 STM32 的串口帧以 FF 55 12 34 81 开始，载荷是 DeviceInfo 后接原始 JPEG；STM32 发给 PC 的帧以 ZAYS 81 开始，载荷是最终 JPEG 后接更新后的 DeviceInfo；SD 卡保存每条 20064 字节的 YS 记录，每成功写入十条同步一次。</desc>
+  <defs>
+    <style>
+      text{font-family:"Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;fill:#173342}
+      .title{font-size:30px;font-weight:700}
+      .route{font-size:26px;font-weight:700}
+      .interface{font-size:17px;fill:#55717D}
+      .format{font-size:20px;font-weight:600}
+      .detail{font-size:18px;fill:#49636F}
+      .step{font-size:18px;font-weight:700;fill:#087F8C}
+      .foot{font-size:17px;fill:#49636F}
+      .mono{font-family:Consolas,"Microsoft YaHei",monospace}
+    </style>
+  </defs>
+  <rect width="1600" height="760" fill="#FFFFFF"/>
+  <text class="title" x="58" y="55">图像链路：传输帧与存储记录</text>
+  <text class="detail" x="58" y="82">同一张图片在不同接口使用不同格式；L 为 2 字节大端载荷长度，Σ8 为载荷字节累加取低 8 位。</text>
+
+  <!-- TX radio format -->
+  <rect x="42" y="105" width="1516" height="153" rx="17" fill="#F2F8FA" stroke="#B9CFD5" stroke-width="2"/>
+  <rect x="42" y="105" width="211" height="153" rx="17" fill="#E1F0F3"/>
+  <text class="route" x="62" y="152">TX → RX</text>
+  <text class="interface" x="62" y="183">2.4 GHz Radio</text>
+  <text class="interface" x="62" y="209">每包固定 254 B</text>
+  <text class="format" x="280" y="145"><tspan class="mono">BEGIN 0x01</tspan>　图片ID｜SN 8B｜原始JPEG长度 2B｜分片数 2B｜版本/姿态…</text>
+  <text class="format" x="280" y="184"><tspan class="mono">DATA  0x80</tspan>　图片ID｜SN 8B｜分片序号 2B｜JPEG ≤ 242B｜末包补 0</text>
+  <text class="format" x="280" y="223"><tspan class="mono">END   0x03</tspan>　图片ID｜SN 8B｜整幅 JPEG 的 Σ8 校验｜其余补 0</text>
+
+  <!-- RX to STM format -->
+  <rect x="42" y="275" width="1516" height="111" rx="17" fill="#F5F8FA" stroke="#B9CFD5" stroke-width="2"/>
+  <rect x="42" y="275" width="211" height="111" rx="17" fill="#E9F0F4"/>
+  <text class="route" x="62" y="320">RX → STM</text>
+  <text class="interface" x="62" y="351">USART2 · 1 Mbps</text>
+  <text class="format mono" x="280" y="318">FF 55 12 34｜81｜L 2B｜DeviceInfo 128B｜原始 JPEG｜Σ8</text>
+  <text class="detail" x="280" y="355">RX 重组并校验无线分片后封帧；L = 128 + 原始 JPEG 长度；Σ8 覆盖 DeviceInfo + JPEG。</text>
+
+  <!-- STM transform -->
+  <path d="M801 388 V426" fill="none" stroke="#087F8C" stroke-width="3"/>
+  <path d="M792 417 L801 428 L810 417" fill="none" stroke="#087F8C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="198" y="398" width="1204" height="45" rx="12" fill="#E7F3F4"/>
+  <text class="step" x="242" y="428">STM 处理：校验接收帧 → 必要时补 JPEG 解码表头 → 更新 DeviceInfo 中的 STM 信息和最终 JPEG 长度</text>
+
+  <!-- STM to PC format -->
+  <rect x="42" y="456" width="1516" height="111" rx="17" fill="#F2F8FA" stroke="#B9CFD5" stroke-width="2"/>
+  <rect x="42" y="456" width="211" height="111" rx="17" fill="#E1F0F3"/>
+  <text class="route" x="62" y="501">STM → PC</text>
+  <text class="interface" x="62" y="532">USART3 · 921600</text>
+  <text class="format mono" x="280" y="499">5A 41 59 53 (ZAYS)｜81｜L 2B｜最终 JPEG｜更新后 DeviceInfo 128B｜Σ8</text>
+  <text class="detail" x="280" y="536">L = 最终 JPEG 长度 + 128；Σ8 覆盖 JPEG + DeviceInfo；按头、JPEG、DeviceInfo、校验 4 段 DMA 发送。</text>
+
+  <!-- STM to SD format -->
+  <rect x="42" y="584" width="1516" height="106" rx="17" fill="#FAF7F1" stroke="#D8C8AF" stroke-width="2"/>
+  <rect x="42" y="584" width="211" height="106" rx="17" fill="#F5EADC"/>
+  <text class="route" x="62" y="628" fill="#9B5B25">STM → SD</text>
+  <text class="interface" x="62" y="658">FatFs · .YS 文件</text>
+  <text class="format" x="280" y="625">Y&lt;8B 胶囊SN的16个大写十六进制字符&gt;.YS：DeviceInfo 128B｜最终 JPEG ≤ 19936B｜0 填充</text>
+  <text class="detail" x="280" y="661">每条固定 20064B，文件无总头，按 SN 在文件末尾追加；不保存串口帧头与校验字节。</text>
+
+  <text class="foot" x="58" y="724">写入时机：每接纳 1 张有效图片尝试追加 1 条；前 9 条只 f_write，第 10 条写入后 f_sync；成功后重新计数。</text>
+  <text class="foot" x="58" y="749">切换 SN 文件时先同步并关闭旧文件；第 10 条写入或同步失败时，下一帧继续尝试同步。</text>
+</svg>

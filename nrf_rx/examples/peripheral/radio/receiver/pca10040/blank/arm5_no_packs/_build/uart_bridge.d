@@ -28,6 +28,7 @@
 .\_build\uart_bridge.o: ..\..\..\..\..\..\..\components\libraries\util\app_util_platform.h
 .\_build\uart_bridge.o: ..\..\..\..\..\..\..\components\libraries\util\nrf_assert.h
 .\_build\uart_bridge.o: ..\..\..\binding_storage.h
+.\_build\uart_bridge.o: ..\..\..\control_stream_parser.h
 .\_build\uart_bridge.o: ..\..\..\image.h
 .\_build\uart_bridge.o: ..\..\..\..\..\..\..\modules\nrfx\hal\nrf_gpio.h
 .\_build\uart_bridge.o: ..\..\..\..\..\..\..\modules\nrfx\nrfx.h

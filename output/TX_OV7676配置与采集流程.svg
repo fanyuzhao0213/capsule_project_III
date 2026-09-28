@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="710" viewBox="0 0 1600 710" role="img" aria-labelledby="title desc">
+  <title id="title">TX 胶囊板 OV7676 配置与图像采集流程</title>
+  <desc id="desc">上电时 nRF 初始化 CX93510，通过 CX93510 的 I2C 代理唤醒并配置 OV7676，回读校验后休眠。每次拍摄周期，唤醒 OV7676 并打开补光灯，CX93510 采集 DVP 像素、压缩 JPEG 至帧 RAM，nRF 按分片从帧 RAM 读取并无线发送。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8.5" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#087F8C" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></marker>
+    <style>
+      text{font-family:"Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;fill:#173342}
+      .section{font-size:30px;font-weight:700;fill:#087F8C}
+      .sectionNote{font-size:19px;fill:#55727E}
+      .num{font-size:19px;font-weight:700;fill:#087F8C}
+      .title{font-size:24px;font-weight:700}
+      .detail{font-size:18px;fill:#45606B}
+      .flow{stroke:#087F8C;stroke-width:3;fill:none;marker-end:url(#arrow)}
+      .foot{font-size:19px;font-weight:600;fill:#2E6170}
+    </style>
+  </defs>
+  <rect width="1600" height="710" fill="#FFFFFF"/>
+
+  <rect x="34" y="26" width="1532" height="309" rx="20" fill="#F3F9FA" stroke="#B8D1D6" stroke-width="2"/>
+  <text class="section" x="68" y="80">上电配置 · 一次完成</text>
+  <text class="sectionNote" x="410" y="80">控制路径：nRF ─SPI→ CX93510 ─I²C 代理→ OV7676</text>
+
+  <rect x="64" y="123" width="258" height="174" rx="14" fill="#FFFFFF" stroke="#BCD2D7" stroke-width="2"/>
+  <text class="num" x="84" y="154">01</text><text class="title" x="84" y="189">初始化 CX93510</text>
+  <text class="detail" x="84" y="226">启用 SPI / 帧 RAM</text>
+  <text class="detail" x="84" y="258">配置传感器 I²C 代理</text>
+
+  <rect x="369" y="123" width="258" height="174" rx="14" fill="#FFFFFF" stroke="#BCD2D7" stroke-width="2"/>
+  <text class="num" x="389" y="154">02</text><text class="title" x="389" y="189">唤醒并识别 OV7676</text>
+  <text class="detail" x="389" y="226">P0.06 控制 XSHUTDOWN</text>
+  <text class="detail" x="389" y="258">经 I²C 代理读取 ID</text>
+
+  <rect x="674" y="123" width="258" height="174" rx="14" fill="#FFFFFF" stroke="#BCD2D7" stroke-width="2"/>
+  <text class="num" x="694" y="154">03</text><text class="title" x="694" y="189">写入传感器参数表</text>
+  <text class="detail" x="694" y="226">480 × 480、YUV422</text>
+  <text class="detail" x="694" y="258">DVP：Y0 / U / Y1 / V</text>
+
+  <rect x="979" y="123" width="258" height="174" rx="14" fill="#FFFFFF" stroke="#BCD2D7" stroke-width="2"/>
+  <text class="num" x="999" y="154">04</text><text class="title" x="999" y="189">启动并校验输出</text>
+  <text class="detail" x="999" y="226">视频流稳定 60 ms</text>
+  <text class="detail" x="999" y="258">回读尺寸、格式、输出</text>
+
+  <rect x="1284" y="123" width="258" height="174" rx="14" fill="#FFFFFF" stroke="#BCD2D7" stroke-width="2"/>
+  <text class="num" x="1304" y="154">05</text><text class="title" x="1304" y="189">进入待机</text>
+  <text class="detail" x="1304" y="226">OV7676 软件休眠</text>
+  <text class="detail" x="1304" y="258">等待下一次拍摄</text>
+
+  <path class="flow" d="M324 210 H362"/><path class="flow" d="M629 210 H667"/><path class="flow" d="M934 210 H972"/><path class="flow" d="M1239 210 H1277"/>
+
+  <rect x="34" y="360" width="1532" height="307" rx="20" fill="#F4F7FA" stroke="#B8D1D6" stroke-width="2"/>
+  <text class="section" x="68" y="414">周期采图 · 每 500 ms 触发</text>
+  <text class="sectionNote" x="584" y="414">图像路径：OV7676 ─DVP→ CX93510 帧 RAM ─SPI→ nRF</text>
+
+  <rect x="64" y="455" width="258" height="174" rx="14" fill="#FFFFFF" stroke="#BCD2D7" stroke-width="2"/>
+  <text class="num" x="84" y="486">01</text><text class="title" x="84" y="521">RTC2 提出拍摄请求</text>
+  <text class="detail" x="84" y="558">上帧未结束则跳过</text>
+  <text class="detail" x="84" y="590">避免覆盖帧 RAM</text>
+
+  <rect x="369" y="455" width="258" height="174" rx="14" fill="#FFFFFF" stroke="#BCD2D7" stroke-width="2"/>
+  <text class="num" x="389" y="486">02</text><text class="title" x="389" y="521">唤醒与预热</text>
+  <text class="detail" x="389" y="558">恢复 SPI、打开补光灯</text>
+  <text class="detail" x="389" y="590">唤醒 OV，等待 25 ms</text>
+
+  <rect x="674" y="455" width="258" height="174" rx="14" fill="#FFFFFF" stroke="#BCD2D7" stroke-width="2"/>
+  <text class="num" x="694" y="486">03</text><text class="title" x="694" y="521">CX93510 触发单帧</text>
+  <text class="detail" x="694" y="558">复位压缩器 / 写指针</text>
+  <text class="detail" x="694" y="590">设 1 帧并启动采集</text>
+
+  <rect x="979" y="455" width="258" height="174" rx="14" fill="#FFFFFF" stroke="#BCD2D7" stroke-width="2"/>
+  <text class="num" x="999" y="486">04</text><text class="title" x="999" y="521">像素变成 JPEG</text>
+  <text class="detail" x="999" y="558">OV 经 DVP 输出像素</text>
+  <text class="detail" x="999" y="590">CX 压缩并写入帧 RAM</text>
+
+  <rect x="1284" y="455" width="258" height="174" rx="14" fill="#FFFFFF" stroke="#BCD2D7" stroke-width="2"/>
+  <text class="num" x="1304" y="486">05</text><text class="title" x="1304" y="521">定位并发送 JPEG</text>
+  <text class="detail" x="1304" y="558">等写入完成，查偏移 / 长度</text>
+  <text class="detail" x="1304" y="590">OV 休眠；nRF 分片读取发送</text>
+
+  <path class="flow" d="M324 542 H362"/><path class="flow" d="M629 542 H667"/><path class="flow" d="M934 542 H972"/><path class="flow" d="M1239 542 H1277"/>
+
+  <text class="foot" x="65" y="697">关键区别：OV7676 输出像素，CX93510 生成 JPEG；nRF 不整帧搬运，只在发 DATA 包时按需读取。</text>
+</svg>

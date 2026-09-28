@@ -27,6 +27,8 @@ typedef enum
 typedef struct
 {
     receiver_antenna_state_id_t state;                  /** 当前天线业务状态。 */
+    volatile bool manual_active;                        /** PC天线测试期间暂停自动选路。 */
+    bool manual_start_received;                         /** 收到0x2C/00后才允许手动选路。 */
 
     volatile uint32_t service_elapsed_ms;               /** 周期服务累计时间，单位ms。 */
     volatile bool service_due;                          /** 已到达一次天线调度周期。 */
@@ -295,6 +297,62 @@ void receiver_antenna_init(void)
     receiver_antenna_start_discovery();
 }
 
+/** @brief 手动测试独占天线选择；停止后按当前绑定状态重新启动自动选路。 */
+bool receiver_antenna_manual_command(uint8_t test_id)
+{
+    if (test_id == LEGACY_ANTENNA_TEST_START)
+    {
+        m_antenna.manual_start_received = true;
+        m_antenna.manual_active = true;
+        m_antenna.end_pending = false;
+        m_antenna.fast_start_pending = false;
+        m_antenna.request_pending = false;
+        m_antenna.request_attempts = 0u;
+        m_antenna.service_due = false;
+        /* 测试结果从零开始，不能带入自动扫描的12路旧RSSI。 */
+        memset(m_antenna.latest_rssi, 0, sizeof(m_antenna.latest_rssi));
+        receiver_image_reset();
+        receiver_radio_clear_queue();
+        NRF_LOG_INFO("[ANT TEST] started on ANT%u",
+                     (unsigned)(rf1662_get_antenna() + 1u));
+        return true;
+    }
+
+    if ((test_id >= 1u) && (test_id <= RF1662_ANTENNA_COUNT))
+    {
+        /* 只有显式收到开始命令，才允许选路和暂停自动状态机。 */
+        if (!m_antenna.manual_start_received || !m_antenna.manual_active)
+        {
+            NRF_LOG_WARNING("[ANT TEST] select ANT%u ignored: start not received",
+                            (unsigned)test_id);
+            return false;
+        }
+        m_antenna.antenna = (uint8_t)(test_id - 1u);
+        /* 每次换路都只保留新选中天线随后收到的最新值。 */
+        memset(m_antenna.latest_rssi, 0, sizeof(m_antenna.latest_rssi));
+        receiver_radio_select_antenna(m_antenna.antenna);
+        receiver_radio_clear_queue();
+        receiver_image_reset();
+        NRF_LOG_INFO("[ANT TEST] selected ANT%u", (unsigned)test_id);
+        return true;
+    }
+
+    if (test_id == LEGACY_ANTENNA_TEST_STOP)
+    {
+        m_antenna.manual_start_received = false;
+        if (m_antenna.manual_active)
+        {
+            m_antenna.manual_active = false;
+            receiver_image_reset();
+            receiver_radio_clear_queue();
+            receiver_antenna_binding_changed();
+            NRF_LOG_INFO("[ANT TEST] stopped; automatic selection resumed");
+        }
+        return true;
+    }
+    return false;
+}
+
 /** @brief 由统一时间基调用，仅产生周期服务标志，不在中断中切天线。 */
 void receiver_antenna_tick_1ms(uint32_t elapsed_ms)
 {
@@ -310,7 +368,25 @@ void receiver_antenna_tick_1ms(uint32_t elapsed_ms)
 bool receiver_antenna_on_radio_packet(const uint8_t *packet,
                                       bool crc_ok, uint8_t rssi)
 {
-    bool target_packet = crc_ok && receiver_packet_matches_bound_sn(packet);
+    bool target_packet;
+
+    if (m_antenna.manual_active)
+    {
+        /* 手动选路仍记录本路有效信号，供后续图片DeviceInfo观察。 */
+        if (crc_ok &&
+            (receiver_packet_matches_bound_sn(packet) ||
+             (!receiver_binding_is_bound() &&
+              (packet[0] == LEGACY_CMD_CAPSULE_SN_BROADCAST))))
+        {
+            uint8_t antenna = rf1662_get_antenna();
+            if (antenna < RF1662_ANTENNA_COUNT)
+            {
+                m_antenna.latest_rssi[antenna] = rssi;
+            }
+        }
+        return false;                  /* 固定当前天线，包仍交给正常业务解析。 */
+    }
+    target_packet = crc_ok && receiver_packet_matches_bound_sn(packet);
 
     /* 任何CRC正确且SN匹配的包，都证明当前绑定胶囊仍在线。 */
     if (target_packet)
@@ -364,6 +440,10 @@ bool receiver_antenna_on_radio_packet(const uint8_t *packet,
 /** @brief 主循环优先处理ISR挂起的0x11和END事件。 */
 bool receiver_antenna_service_events(void)
 {
+    if (m_antenna.manual_active)
+    {
+        return false;
+    }
 	//已经收到TX发送的0x11许可
     if (m_antenna.fast_start_pending)
     {
@@ -423,6 +503,12 @@ DISCOVERY ──绑定成功──► SEEK_END ──收到0x11──► FAST_SC
 bool receiver_antenna_service_schedule(void)
 {
     uint32_t now;
+
+    if (m_antenna.manual_active)
+    {
+        m_antenna.service_due = false;
+        return false;
+    }
 
     if (!m_antenna.service_due)
     {
@@ -586,6 +672,12 @@ void receiver_antenna_binding_changed(void)
     m_antenna.hold_until_ms = 0u;
     memset(m_antenna.latest_rssi, 0, sizeof(m_antenna.latest_rssi));
 
+    if (m_antenna.manual_active)
+    {
+        m_antenna.request_pending = false;
+        return;                         /* 测试期间绑定变更不抢占手动天线。 */
+    }
+
     if (receiver_binding_is_bound())
     {
         NRF_LOG_INFO("[BIND] active; clear RSSI and seek target END");
@@ -604,6 +696,10 @@ void receiver_antenna_binding_changed(void)
 /** @brief 收到0x11后校验绑定SN，并挂起正式扫描启动事件。 */
 void receiver_antenna_fast_scan_granted(const uint8_t *sn)
 {
+    if (m_antenna.manual_active)
+    {
+        return;
+    }
     if (receiver_binding_is_bound() && m_antenna.request_pending &&
         receiver_binding_matches(sn))
     {
@@ -629,6 +725,10 @@ void receiver_antenna_note_complete_image(void)
 /** @brief 记录一次图片失败，供LOCKED状态判断是否需要换天线。 */
 void receiver_antenna_note_frame_failure(void)
 {
+    if (m_antenna.manual_active)
+    {
+        return;
+    }
     if (m_antenna.failed_frame_count < 0xFFu)
     {
         ++m_antenna.failed_frame_count;
@@ -638,6 +738,10 @@ void receiver_antenna_note_frame_failure(void)
 /** @brief 发现SN后延长当前天线驻留，便于STM和上位机完成发现。 */
 void receiver_antenna_note_discovery_sn(void)
 {
+    if (m_antenna.manual_active)
+    {
+        return;
+    }
     if ((m_antenna.state == ANTENNA_STATE_DISCOVERY) &&
         !m_antenna.discovery_holding)
     {
@@ -651,6 +755,10 @@ void receiver_antenna_note_discovery_sn(void)
 bool receiver_antenna_try_fast_scan_request(uint8_t image_id,
                                             const uint8_t *capsule_sn)
 {
+    if (m_antenna.manual_active)
+    {
+        return false;
+    }
     if (!m_antenna.request_pending)
     {
         return false;
@@ -670,12 +778,23 @@ bool receiver_antenna_try_fast_scan_request(uint8_t image_id,
 /** @brief 查询当前是否正在等待一次快速扫描协商。 */
 bool receiver_antenna_scan_request_pending(void)
 {
-    return m_antenna.request_pending;
+    return !m_antenna.manual_active && m_antenna.request_pending;
 }
 
 /** @brief 复制最近一次完整扫描结果，供128字节设备信息使用。 */
 void receiver_antenna_copy_latest_rssi(
     uint8_t rssi[RF1662_ANTENNA_COUNT])
 {
+    if (m_antenna.manual_active)
+    {
+        uint8_t antenna = rf1662_get_antenna();
+        /* DeviceInfo中测试天线以外的11路必须恒为0。 */
+        memset(rssi, 0, RF1662_ANTENNA_COUNT);
+        if (antenna < RF1662_ANTENNA_COUNT)
+        {
+            rssi[antenna] = m_antenna.latest_rssi[antenna];
+        }
+        return;
+    }
     memcpy(rssi, m_antenna.latest_rssi, RF1662_ANTENNA_COUNT);
 }

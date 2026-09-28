@@ -1,0 +1,336 @@
+{"kind":"deck","id":"pr/8tazfa","name":"Deck"}
+{"kind":"layout","layoutId":"bfe981c3-00f7-43b7-aa80-5676f0249216","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"06de8668-4e3a-4629-9fa2-7f5831c40372","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/94mx7q","slide":1,"title":"试用期转正答辩","textShapes":4}
+{"kind":"textbox","id":"sh/e54fixc3","slide":1,"text":"试用期转正答辩","textPreview":"试用期转正答辩","textChars":7,"textLines":1,"bbox":[82,76,800,40]}
+{"kind":"textbox","id":"sh/1svedcbu","slide":1,"text":"工作回顾与\n工程重构实践","textPreview":"工作回顾与 | 工程重构实践","textChars":12,"textLines":2,"bbox":[78,177,1000,175]}
+{"kind":"textbox","id":"sh/grmxk7u9","slide":1,"text":"软件开发岗位  /  [姓名]  /  [部门]  /  [日期]","textPreview":"软件开发岗位  /  [姓名]  /  [部门]  /  [日期]","textChars":33,"textLines":1,"bbox":[84,554,1000,40]}
+{"kind":"textbox","id":"sh/r2twn2ts","slide":1,"text":"磁控胶囊项目是工作案例之一，重点说明技术理解、改造思路与交付方式","textPreview":"磁控胶囊项目是工作案例之一，重点说明技术理解、改造思路与交付方式","textChars":32,"textLines":1,"bbox":[84,615,1090,32]}
+{"kind":"notes","id":"nt/94mx7q","slide":1,"text":"补充姓名、岗位、部门、日期。开场建议先说试用期的主要职责，再说明胶囊项目是其中一个能体现系统理解和工程实践的案例。"}
+{"kind":"slide","id":"sl/wlgfei","slide":2,"title":"01  工作总览","textShapes":22}
+{"kind":"textbox","id":"sh/25orq5gj","slide":2,"text":"01  工作总览","textPreview":"01  工作总览","textChars":8,"textLines":1,"bbox":[70,27,800,25]}
+{"kind":"textbox","id":"sh/psfalkfu","slide":2,"text":"试用期工作内容与考核表对应","textPreview":"试用期工作内容与考核表对应","textChars":13,"textLines":1,"bbox":[70,68,1140,58]}
+{"kind":"textbox","id":"sh/4r69sfy9","slide":2,"text":"答辩主线围绕“理解工作、完成任务、形成交付、持续改进”。","textPreview":"答辩主线围绕“理解工作、完成任务、形成交付、持续改进”。","textChars":28,"textLines":1,"bbox":[72,132,1130,47]}
+{"kind":"textbox","id":"sh/ruhsnax0","slide":2,"text":"转正答辩  /  磁控胶囊内窥镜软件","textPreview":"转正答辩  /  磁控胶囊内窥镜软件","textChars":18,"textLines":1,"bbox":[70,681,760,19]}
+{"kind":"textbox","id":"sh/qt8bu5wf","slide":2,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[1172,678,42,22]}
+{"kind":"textbox","id":"sh/dwzapkf6","slide":2,"text":"20%","textPreview":"20%","textChars":3,"textLines":1,"bbox":[83,206,90,35]}
+{"kind":"textbox","id":"sh/cvqtwfel","slide":2,"text":"产品与系统理解","textPreview":"产品与系统理解","textChars":7,"textLines":1,"bbox":[185,206,280,35]}
+{"kind":"textbox","id":"sh/zyhsruxw","slide":2,"text":"产品构成、主控流程、通信链路和异常路径","textPreview":"产品构成、主控流程、通信链路和异常路径","textChars":19,"textLines":1,"bbox":[487,206,690,40]}
+{"kind":"shape","id":"sh/ex8bipwr","slide":2,"bbox":[82,256,1095,0]}
+{"kind":"textbox","id":"sh/wz6ps765","slide":2,"text":"30%","textPreview":"30%","textChars":3,"textLines":1,"bbox":[83,278,90,35]}
+{"kind":"textbox","id":"sh/x0fqlcnq","slide":2,"text":"代码开发与缺陷修复","textPreview":"代码开发与缺陷修复","textChars":9,"textLines":1,"bbox":[185,278,280,35]}
+{"kind":"textbox","id":"sh/axo7qhoz","slide":2,"text":"按规范开发、定位问题、控制修改影响","textPreview":"按规范开发、定位问题、控制修改影响","textChars":17,"textLines":1,"bbox":[487,278,690,40]}
+{"kind":"shape","id":"sh/vyx8j25k","slide":2,"bbox":[82,328,1095,0]}
+{"kind":"textbox","id":"sh/k36pwr61","slide":2,"text":"20%","textPreview":"20%","textChars":3,"textLines":1,"bbox":[83,350,90,35]}
+{"kind":"textbox","id":"sh/54fqpwnm","slide":2,"text":"交接与版本迭代","textPreview":"交接与版本迭代","textChars":7,"textLines":1,"bbox":[185,350,280,35]}
+{"kind":"textbox","id":"sh/i1o7uhob","slide":2,"text":"接收资料，承担功能维护与迭代，配合验证","textPreview":"接收资料，承担功能维护与迭代，配合验证","textChars":19,"textLines":1,"bbox":[487,350,690,40]}
+{"kind":"shape","id":"sh/j2x8nm5w","slide":2,"bbox":[82,400,1095,0]}
+{"kind":"textbox","id":"sh/s7q90r6d","slide":2,"text":"20%","textPreview":"20%","textChars":3,"textLines":1,"bbox":[83,422,90,35]}
+{"kind":"textbox","id":"sh/tszqtwny","slide":2,"text":"法规标准与软件文档","textPreview":"法规标准与软件文档","textChars":9,"textLines":1,"bbox":[185,422,280,35]}
+{"kind":"textbox","id":"sh/1ovqdwf2","slide":2,"text":"理解适用标准，按流程输出可追溯资料","textPreview":"理解适用标准，按流程输出可追溯资料","textChars":17,"textLines":1,"bbox":[487,422,690,40]}
+{"kind":"shape","id":"sh/gnmp4ryh","slide":2,"bbox":[82,472,1095,0]}
+{"kind":"textbox","id":"sh/fmd8bmxw","slide":2,"text":"10%","textPreview":"10%","textChars":3,"textLines":1,"bbox":[83,494,90,35]}
+{"kind":"textbox","id":"sh/el472hgb","slide":2,"text":"专项任务","textPreview":"专项任务","textChars":4,"textLines":1,"bbox":[185,494,280,35]}
+{"kind":"textbox","id":"sh/psfqhgfy","slide":2,"text":"按期处理临时任务，及时反馈风险和进度","textPreview":"按期处理临时任务，及时反馈风险和进度","textChars":18,"textLines":1,"bbox":[487,494,690,40]}
+{"kind":"shape","id":"sh/or6p8bed","slide":2,"bbox":[82,544,1095,0]}
+{"kind":"textbox","id":"sh/3qd8f6x8","slide":2,"text":"职业素养（20%）","textPreview":"职业素养（20%）","textChars":9,"textLines":1,"bbox":[83,586,205,35]}
+{"kind":"textbox","id":"sh/2p4761wn","slide":2,"text":"工作态度　责任心　执行力　沟通协调　团队协作","textPreview":"工作态度　责任心　执行力　沟通协调　团队协作","textChars":22,"textLines":1,"bbox":[296,586,850,36]}
+{"kind":"notes","id":"nt/wlgfei","slide":2,"text":"内容对应答辩表五项工作内容与五项职业素养。为避免替本人编造绩效，每一项后续页都留有具体经历、数据或文件编号的填写位置。"}
+{"kind":"slide","id":"sl/dbjn39","slide":3,"title":"02  项目理解","textShapes":28}
+{"kind":"textbox","id":"sh/czul4f61","slide":3,"text":"02  项目理解","textPreview":"02  项目理解","textChars":8,"textLines":1,"bbox":[70,27,800,25]}
+{"kind":"textbox","id":"sh/bylkvapg","slide":3,"text":"产品系统与图像数据链路","textPreview":"产品系统与图像数据链路","textChars":11,"textLines":1,"bbox":[70,68,1140,58]}
+{"kind":"textbox","id":"sh/qxc325ov","slide":3,"text":"胶囊端采图与编码，接收端选天线和转发，STM32 校验后送 PC 与 SD。","textPreview":"胶囊端采图与编码，接收端选天线和转发，STM32 校验后送 PC 与 SD。","textChars":38,"textLines":1,"bbox":[72,132,1130,47]}
+{"kind":"textbox","id":"sh/l4n21k7i","slide":3,"text":"转正答辩  /  磁控胶囊内窥镜软件","textPreview":"转正答辩  /  磁控胶囊内窥镜软件","textChars":18,"textLines":1,"bbox":[70,681,760,19]}
+{"kind":"textbox","id":"sh/03el8f6x","slide":3,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[1172,678,42,22]}
+{"kind":"shape","id":"sh/z25kzaps","slide":3,"bbox":[66,258,160,138]}
+{"kind":"textbox","id":"sh/y1w365o7","slide":3,"text":"OV7676","textPreview":"OV7676","textChars":6,"textLines":1,"bbox":[78,271,136,36]}
+{"kind":"textbox","id":"sh/18j2p07e","slide":3,"text":"图像传感器\n480×480 YUV422","textPreview":"图像传感器 | 480×480 YUV422","textChars":20,"textLines":2,"bbox":[78,311,136,80]}
+{"kind":"shape","id":"sh/g7a1wv6t","slide":3,"bbox":[267,258,160,138]}
+{"kind":"textbox","id":"sh/md83qx8r","slide":3,"text":"CX93510","textPreview":"CX93510","textChars":7,"textLines":1,"bbox":[279,271,136,36]}
+{"kind":"textbox","id":"sh/7eh4j2pw","slide":3,"text":"采集同步\nJPEG 压缩 / 帧 RAM","textPreview":"采集同步 | JPEG 压缩 / 帧 RAM","textChars":20,"textLines":2,"bbox":[279,311,136,80]}
+{"kind":"shape","id":"sh/8fqls7qh","slide":3,"bbox":[468,258,160,138]}
+{"kind":"textbox","id":"sh/tgzmlc72","slide":3,"text":"nRF TX","textPreview":"nRF TX","textChars":6,"textLines":1,"bbox":[480,271,136,36]}
+{"kind":"textbox","id":"sh/uh8nuh8n","slide":3,"text":"SPI 读帧 RAM\n分片无线发送","textPreview":"SPI 读帧 RAM | 分片无线发送","textChars":17,"textLines":2,"bbox":[480,311,136,80]}
+{"kind":"shape","id":"sh/vih4nmp8","slide":3,"bbox":[669,258,160,138]}
+{"kind":"textbox","id":"sh/gjq5w7qt","slide":3,"text":"nRF RX","textPreview":"nRF RX","textChars":6,"textLines":1,"bbox":[681,271,136,36]}
+{"kind":"textbox","id":"sh/h4jmpc7e","slide":3,"text":"12 路天线\n选路 / 收包","textPreview":"12 路天线 | 选路 / 收包","textChars":14,"textLines":2,"bbox":[681,311,136,80]}
+{"kind":"shape","id":"sh/i5snyh8j","slide":3,"bbox":[870,258,160,138]}
+{"kind":"textbox","id":"sh/3614rmp4","slide":3,"text":"STM32","textPreview":"STM32","textChars":5,"textLines":1,"bbox":[882,271,136,36]}
+{"kind":"textbox","id":"sh/fa14fm5c","slide":3,"text":"USART2 解析\n校验 / 转发 / SD","textPreview":"USART2 解析 | 校验 / 转发 / SD","textChars":22,"textLines":2,"bbox":[882,311,136,80]}
+{"kind":"shape","id":"sh/e9s3mh4r","slide":3,"bbox":[1071,258,160,138]}
+{"kind":"textbox","id":"sh/1c3mhwni","slide":3,"text":"PC","textPreview":"PC","textChars":2,"textLines":1,"bbox":[1083,271,136,36]}
+{"kind":"textbox","id":"sh/0bulormx","slide":3,"text":"图像显示\n设备信息 / 文件","textPreview":"图像显示 | 设备信息 / 文件","textChars":14,"textLines":2,"bbox":[1083,311,136,80]}
+{"kind":"shape","id":"sh/r61kbm5g","slide":3,"bbox":[0,0,0,0]}
+{"kind":"textbox","id":"sh/qls3ih4v","slide":3,"text":"DVP 并行","textPreview":"DVP 并行","textChars":6,"textLines":1,"bbox":[229,308,67,25]}
+{"kind":"shape","id":"sh/d8j2dcn6","slide":3,"bbox":[0,0,0,0]}
+{"kind":"textbox","id":"sh/s7alkrm1","slide":3,"text":"主机 SPI","textPreview":"主机 SPI","textChars":6,"textLines":1,"bbox":[430,308,67,25]}
+{"kind":"shape","id":"sh/3ihk7254","slide":3,"bbox":[0,0,0,0]}
+{"kind":"textbox","id":"sh/ih83ex4j","slide":3,"text":"2.4 GHz Radio","textPreview":"2.4 GHz Radio","textChars":13,"textLines":1,"bbox":[631,308,67,25]}
+{"kind":"shape","id":"sh/8bm9sjy5","slide":3,"bbox":[0,0,0,0]}
+{"kind":"textbox","id":"sh/9cva1ozq","slide":3,"text":"USART2\n1 Mbit/s","textPreview":"USART2 | 1 Mbit/s","textChars":15,"textLines":2,"bbox":[832,308,67,25]}
+{"kind":"shape","id":"sh/m94rq9gf","slide":3,"bbox":[0,0,0,0]}
+{"kind":"textbox","id":"sh/nad8zehk","slide":3,"text":"USART3\n921600 bit/s","textPreview":"USART3 | 921600 bit/s","textChars":19,"textLines":2,"bbox":[1033,308,67,25]}
+{"kind":"textbox","id":"sh/wf69wjyh","slide":3,"text":"数据归属","textPreview":"数据归属","textChars":4,"textLines":1,"bbox":[80,462,120,30]}
+{"kind":"textbox","id":"sh/x0fa5oz2","slide":3,"text":"像素流","textPreview":"像素流","textChars":3,"textLines":1,"bbox":[198,462,138,30]}
+{"kind":"textbox","id":"sh/ad4ru9gb","slide":3,"text":"JPEG 帧数据","textPreview":"JPEG 帧数据","textChars":8,"textLines":1,"bbox":[400,462,180,30]}
+{"kind":"textbox","id":"sh/vexs3ehw","slide":3,"text":"固定长度无线包","textPreview":"固定长度无线包","textChars":7,"textLines":1,"bbox":[619,462,205,30]}
+{"kind":"textbox","id":"sh/cj29kzyx","slide":3,"text":"校验后的图片帧","textPreview":"校验后的图片帧","textChars":7,"textLines":1,"bbox":[861,462,215,30]}
+{"kind":"textbox","id":"sh/dkbqtkzi","slide":3,"text":"SD 卡保存固定长度 .YS 记录，PC 可接收实时图像并查看历史记录。","textPreview":"SD 卡保存固定长度 .YS 记录，PC 可接收实时图像并查看历史记录。","textChars":36,"textLines":1,"bbox":[80,549,1090,40]}
+{"kind":"notes","id":"nt/dbjn39","slide":3,"text":"源码依据：nrf_tx/examples/peripheral/radio/TX/ov7676.c、cx93510.c、image.c；RX 的 antenna_manager/radio_link；stm32F103RET6/stm_project/Core/Src/capsule_protocol.c、sd_storage.c。箭头和流程框均为可编辑 PowerPoint 对象。"}
+{"kind":"slide","id":"sl/0pvm4a","slide":4,"title":"03  采集与编码","textShapes":20}
+{"kind":"textbox","id":"sh/4nqtcbid","slide":4,"text":"03  采集与编码","textPreview":"03  采集与编码","textChars":9,"textLines":1,"bbox":[70,27,800,25]}
+{"kind":"textbox","id":"sh/3mhs36hs","slide":4,"text":"图像怎样变成可发送的 JPEG","textPreview":"图像怎样变成可发送的 JPEG","textChars":15,"textLines":1,"bbox":[70,68,1140,58]}
+{"kind":"textbox","id":"sh/il8ba107","slide":4,"text":"关键边界：OV7676 输出原始像素；CX93510 负责采集、压缩和缓存；nRF 负责读取与传输。","textPreview":"关键边界：OV7676 输出原始像素；CX93510 负责采集、压缩和缓存；nRF 负责读取与传输。","textChars":50,"textLines":1,"bbox":[72,132,1130,47]}
+{"kind":"textbox","id":"sh/dsju9gzu","slide":4,"text":"转正答辩  /  磁控胶囊内窥镜软件","textPreview":"转正答辩  /  磁控胶囊内窥镜软件","textChars":18,"textLines":1,"bbox":[70,681,760,19]}
+{"kind":"textbox","id":"sh/sratgbi9","slide":4,"text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[1172,678,42,22]}
+{"kind":"shape","id":"sh/rqhc76ho","slide":4,"bbox":[85,263,255,183]}
+{"kind":"textbox","id":"sh/qp8bel0j","slide":4,"text":"OV7676","textPreview":"OV7676","textChars":6,"textLines":1,"bbox":[97,276,231,36]}
+{"kind":"textbox","id":"sh/twfaxwzq","slide":4,"text":"曝光成像\n并行 DVP 输出\nYUV422：Y0/U/Y1/V","textPreview":"曝光成像 | 并行 DVP 输出 | YUV422：Y0/U/Y1/V","textChars":31,"textLines":3,"bbox":[97,316,231,125]}
+{"kind":"shape","id":"sh/8v6t4ri5","slide":4,"bbox":[500,263,290,183]}
+{"kind":"textbox","id":"sh/yp4f2x8v","slide":4,"text":"CX93510","textPreview":"CX93510","textChars":7,"textLines":1,"bbox":[512,276,266,36]}
+{"kind":"textbox","id":"sh/zqdgv29g","slide":4,"text":"DVP 同步采集\nJPEG 编码器处理\n结果写入帧 RAM","textPreview":"DVP 同步采集 | JPEG 编码器处理 | 结果写入帧 RAM","textChars":29,"textLines":3,"bbox":[512,316,266,125]}
+{"kind":"shape","id":"sh/kr6x4nq1","slide":4,"bbox":[918,263,285,183]}
+{"kind":"textbox","id":"sh/lcfyxsrm","slide":4,"text":"nRF52832","textPreview":"nRF52832","textChars":8,"textLines":1,"bbox":[930,276,261,36]}
+{"kind":"textbox","id":"sh/mdof6x8r","slide":4,"text":"通过 SPI 访问 CX93510\n读取帧块状态、地址和长度\n每个 DATA 分片按需取数","textPreview":"通过 SPI 访问 CX93510 | 读取帧块状态、地址和长度 | 每个 DATA 分片按需取数","textChars":45,"textLines":3,"bbox":[930,316,261,125]}
+{"kind":"shape","id":"sh/7exgz29c","slide":4,"bbox":[0,0,0,0]}
+{"kind":"textbox","id":"sh/8f6x87qx","slide":4,"text":"DVP 像素流","textPreview":"DVP 像素流","textChars":7,"textLines":1,"bbox":[347,321,130,25]}
+{"kind":"shape","id":"sh/9gfy1cri","slide":4,"bbox":[0,0,0,0]}
+{"kind":"textbox","id":"sh/uhofah83","slide":4,"text":"SPI 读帧 RAM","textPreview":"SPI 读帧 RAM","textChars":10,"textLines":1,"bbox":[798,321,128,25]}
+{"kind":"textbox","id":"sh/vihg3m9o","slide":4,"text":"控制路径","textPreview":"控制路径","textChars":4,"textLines":1,"bbox":[88,212,115,27]}
+{"kind":"textbox","id":"sh/rmhwrm5g","slide":4,"text":"nRF 通过 CX93510 的 I²C 代理配置 OV7676，读回关键寄存器确认输出格式。","textPreview":"nRF 通过 CX93510 的 I²C 代理配置 OV7676，读回关键寄存器确认输出格式。","textChars":47,"textLines":1,"bbox":[218,208,960,35]}
+{"kind":"textbox","id":"sh/6l8fyhob","slide":4,"text":"采集顺序","textPreview":"采集顺序","textChars":4,"textLines":1,"bbox":[85,503,125,30]}
+{"kind":"textbox","id":"sh/tozetcnm","slide":4,"text":"唤醒摄像头并预热","textPreview":"唤醒摄像头并预热","textChars":8,"textLines":1,"bbox":[236,503,220,33]}
+{"kind":"textbox","id":"sh/snqx0r61","slide":4,"text":"启动单帧采集与 JPEG 压缩","textPreview":"启动单帧采集与 JPEG 压缩","textChars":15,"textLines":1,"bbox":[490,503,330,33]}
+{"kind":"textbox","id":"sh/jihwn25k","slide":4,"text":"JPEG 留在帧 RAM，nRF 分片读取","textPreview":"JPEG 留在帧 RAM，nRF 分片读取","textChars":21,"textLines":1,"bbox":[844,503,355,33]}
+{"kind":"textbox","id":"sh/ihovuxoz","slide":4,"text":"当前 TX 不把整张 JPEG 复制到 nRF 的 image_buff[]；发送 DATA 时从 CX93510 帧 RAM 读取对应区间。","textPreview":"当前 TX 不把整张 JPEG 复制到 nRF 的 image_buff[]；发送 DATA 时从 CX93510 帧 RAM 读取对应区间。","textChars":71,"textLines":1,"bbox":[86,581,1105,50]}
+{"kind":"notes","id":"nt/0pvm4a","slide":4,"text":"设备型号以当前源码为准：OV7676（不是 OV7766）。OV7676 经 CX93510 内部 I²C 主机配置，像素经并行 DVP 送到 CX93510；CX93510 在有限单帧模式下采集，JPEG 数据与帧块信息进入其帧 RAM；nRF52832 通过 SPI 读取帧信息并逐片读 JPEG。当前正式无线协议只发送原始图像块，不将旧版 IMG/CRC16 分块写法当作当前协议。来源：TX/ov7676.c、cx93510.c、image.c；doc/01-通信协议.md；doc/03-TX软件框架.md。"}
+{"kind":"slide","id":"sl/2dfk6s","slide":5,"title":"04  通信链路","textShapes":21}
+{"kind":"textbox","id":"sh/4761ob6l","slide":5,"text":"04  通信链路","textPreview":"04  通信链路","textChars":8,"textLines":1,"bbox":[70,27,800,25]}
+{"kind":"textbox","id":"sh/j6xkv650","slide":5,"text":"无线传输、接收与 PC 转发","textPreview":"无线传输、接收与 PC 转发","textChars":14,"textLines":1,"bbox":[70,68,1140,58]}
+{"kind":"textbox","id":"sh/i54jm1of","slide":5,"text":"各段使用不同帧格式，排查问题时先确认数据停在哪条链路。","textPreview":"各段使用不同帧格式，排查问题时先确认数据停在哪条链路。","textChars":27,"textLines":1,"bbox":[72,132,1130,47]}
+{"kind":"textbox","id":"sh/hkv2tgnu","slide":5,"text":"转正答辩  /  磁控胶囊内窥镜软件","textPreview":"转正答辩  /  磁控胶囊内窥镜软件","textChars":18,"textLines":1,"bbox":[70,681,760,19]}
+{"kind":"textbox","id":"sh/wjm1kb69","slide":5,"text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[1172,678,42,22]}
+{"kind":"shape","id":"sh/vidkr65o","slide":5,"bbox":[82,258,230,132]}
+{"kind":"textbox","id":"sh/uh4ji1oj","slide":5,"text":"nRF TX","textPreview":"nRF TX","textChars":6,"textLines":1,"bbox":[94,271,206,36]}
+{"kind":"textbox","id":"sh/1gz250ne","slide":5,"text":"BEGIN / DATA / END\n每包 254 B\nDATA 最多 242 B 图像","textPreview":"BEGIN / DATA / END | 每包 254 B | DATA 最多 242 B 图像","textChars":44,"textLines":3,"bbox":[94,311,206,74]}
+{"kind":"shape","id":"sh/gfq1wvmt","slide":5,"bbox":[365,258,230,132]}
+{"kind":"textbox","id":"sh/6903qh4j","slide":5,"text":"nRF RX","textPreview":"nRF RX","textChars":6,"textLines":1,"bbox":[377,271,206,36]}
+{"kind":"textbox","id":"sh/ra9kjm5o","slide":5,"text":"CRC 与 SN 匹配\n12 路天线选路\n无线包经 UART 转发","textPreview":"CRC 与 SN 匹配 | 12 路天线选路 | 无线包经 UART 转发","textChars":33,"textLines":3,"bbox":[377,311,206,74]}
+{"kind":"shape","id":"sh/sb2lsrm9","slide":5,"bbox":[648,258,230,132]}
+{"kind":"textbox","id":"sh/tcb2lwnu","slide":5,"text":"STM32","textPreview":"STM32","textChars":5,"textLines":1,"bbox":[660,271,206,36]}
+{"kind":"textbox","id":"sh/il0jmh47","slide":5,"text":"USART2 流式解析\n长度 / Checksum 校验\n补 DeviceInfo / JPEG","textPreview":"USART2 流式解析 | 长度 / Checksum 校验 | 补 DeviceInfo / JPEG","textChars":48,"textLines":3,"bbox":[660,311,206,74]}
+{"kind":"shape","id":"sh/j69kfm5s","slide":5,"bbox":[931,258,230,132]}
+{"kind":"textbox","id":"sh/47i1ormd","slide":5,"text":"PC + SD","textPreview":"PC + SD","textChars":7,"textLines":1,"bbox":[943,271,206,36]}
+{"kind":"textbox","id":"sh/58r2hwny","slide":5,"text":"USART3 DMA 发 PC\nSD 写入 20064 B 记录\n每 10 次成功写入同步","textPreview":"USART3 DMA 发 PC | SD 写入 20064 B 记录 | 每 10 次成功写入同步","textChars":45,"textLines":3,"bbox":[943,311,206,74]}
+{"kind":"shape","id":"sh/2hk3y14b","slide":5,"bbox":[0,0,0,0]}
+{"kind":"textbox","id":"sh/n2dkr65w","slide":5,"text":"Radio","textPreview":"Radio","textChars":5,"textLines":1,"bbox":[312,304,60,25]}
+{"kind":"shape","id":"sh/zm50jylo","slide":5,"bbox":[0,0,0,0]}
+{"kind":"textbox","id":"sh/ylwzqdk3","slide":5,"text":"USART2","textPreview":"USART2","textChars":6,"textLines":1,"bbox":[595,304,60,25]}
+{"kind":"shape","id":"sh/lonil83e","slide":5,"bbox":[0,0,0,0]}
+{"kind":"textbox","id":"sh/knehc32t","slide":5,"text":"USART3 / SDIO","textPreview":"USART3 / SDIO","textChars":13,"textLines":1,"bbox":[878,304,100,25]}
+{"kind":"textbox","id":"sh/7q50nilk","slide":5,"text":"RX → STM 帧","textPreview":"RX → STM 帧","textChars":10,"textLines":1,"bbox":[86,466,160,30]}
+{"kind":"textbox","id":"sh/mpwzedkz","slide":5,"text":"FF 55 12 34 81 + 长度 + 128 B DeviceInfo + JPEG + 校验","textPreview":"FF 55 12 34 81 + 长度 + 128 B DeviceInfo + JPEG + 校验","textChars":50,"textLines":1,"bbox":[254,464,922,34]}
+{"kind":"textbox","id":"sh/9c7ips3q","slide":5,"text":"STM → PC 帧","textPreview":"STM → PC 帧","textChars":10,"textLines":1,"bbox":[86,516,160,30]}
+{"kind":"textbox","id":"sh/8ryhgn25","slide":5,"text":"ZAYS 81 + 长度 + JPEG + DeviceInfo + 校验；图片按四段 DMA 顺序发送","textPreview":"ZAYS 81 + 长度 + JPEG + DeviceInfo + 校验；图片按四段 DMA 顺序发送","textChars":52,"textLines":1,"bbox":[254,514,950,42]}
+{"kind":"textbox","id":"sh/vep0rilg","slide":5,"text":"无线协议 / UART 帧头 / SD 记录格式不能混为同一种“胶囊协议”。","textPreview":"无线协议 / UART 帧头 / SD 记录格式不能混为同一种“胶囊协议”。","textChars":38,"textLines":1,"bbox":[86,586,1090,35]}
+{"kind":"notes","id":"nt/2dfk6s","slide":5,"text":"TX-RX 无线协议依据 doc/01-通信协议.md；RX到STM和STM到PC依据 doc/08-STM软件框架.md 与当前 capsule_protocol.c。协议字段和校验要以这些当前文件为准。"}
+{"kind":"slide","id":"sl/gp43rf","slide":6,"title":"05  天线选路","textShapes":31}
+{"kind":"textbox","id":"sh/4vmhsnux","slide":6,"text":"05  天线选路","textPreview":"05  天线选路","textChars":8,"textLines":1,"bbox":[70,27,800,25]}
+{"kind":"textbox","id":"sh/3ad0zitc","slide":6,"text":"RX 天线扫描：旧版与新版","textPreview":"RX 天线扫描：旧版与新版","textChars":13,"textLines":1,"bbox":[70,68,1140,58]}
+{"kind":"textbox","id":"sh/i94zqdcr","slide":6,"text":"旧版独立扫描并锁定一路；新版与 TX 协商快速 SN 广播，保留三路候选。","textPreview":"旧版独立扫描并锁定一路；新版与 TX 协商快速 SN 广播，保留三路候选。","textChars":37,"textLines":1,"bbox":[72,132,1130,47]}
+{"kind":"textbox","id":"sh/d0fi5sbe","slide":6,"text":"转正答辩  /  磁控胶囊内窥镜软件","textPreview":"转正答辩  /  磁控胶囊内窥镜软件","textChars":18,"textLines":1,"bbox":[70,681,760,19]}
+{"kind":"textbox","id":"sh/sz6hwnut","slide":6,"text":"06","textPreview":"06","textChars":2,"textLines":1,"bbox":[1172,678,42,22]}
+{"kind":"textbox","id":"sh/ryd03it8","slide":6,"text":"TYGD31 旧版","textPreview":"TYGD31 旧版","textChars":9,"textLines":1,"bbox":[84,205,470,32]}
+{"kind":"textbox","id":"sh/qx4zudcn","slide":6,"text":"当前工程","textPreview":"当前工程","textChars":4,"textLines":1,"bbox":[665,205,500,32]}
+{"kind":"shape","id":"sh/t4bit8ba","slide":6,"bbox":[82,247,505,76]}
+{"kind":"textbox","id":"sh/832hk3up","slide":6,"text":"逐路扫描","textPreview":"逐路扫描","textChars":4,"textLines":1,"bbox":[98,256,473,31]}
+{"kind":"textbox","id":"sh/ilgfa1cj","slide":6,"text":"12 路天线每 3 ms 切换一次","textPreview":"12 路天线每 3 ms 切换一次","textChars":17,"textLines":1,"bbox":[98,290,473,30]}
+{"kind":"textbox","id":"sh/jmpw36t4","slide":6,"text":"▼","textPreview":"▼","textChars":1,"textLines":1,"bbox":[327,323,30,16]}
+{"kind":"shape","id":"sh/4nixcrup","slide":6,"bbox":[82,338,505,76]}
+{"kind":"textbox","id":"sh/58re5wba","slide":6,"text":"收集 RSSI","textPreview":"收集 RSSI","textChars":7,"textLines":1,"bbox":[98,347,473,31]}
+{"kind":"textbox","id":"sh/q90fe1cv","slide":6,"text":"全局累计 36 个正值，各路样本数不固定","textPreview":"全局累计 36 个正值，各路样本数不固定","textChars":20,"textLines":1,"bbox":[98,381,473,30]}
+{"kind":"textbox","id":"sh/ra9g76t0","slide":6,"text":"▼","textPreview":"▼","textChars":1,"textLines":1,"bbox":[327,414,30,16]}
+{"kind":"shape","id":"sh/sbixgbal","slide":6,"bbox":[82,429,505,76]}
+{"kind":"textbox","id":"sh/dcry9gb6","slide":6,"text":"只选一路","textPreview":"只选一路","textChars":4,"textLines":1,"bbox":[98,438,473,31]}
+{"kind":"textbox","id":"sh/ed0filsr","slide":6,"text":"每路保留最强一次，选幅值最小者","textPreview":"每路保留最强一次，选幅值最小者","textChars":15,"textLines":1,"bbox":[98,472,473,30]}
+{"kind":"textbox","id":"sh/fe9gbqtc","slide":6,"text":"▼","textPreview":"▼","textChars":1,"textLines":1,"bbox":[327,505,30,16]}
+{"kind":"shape","id":"sh/bitwzq9k","slide":6,"bbox":[82,520,505,76]}
+{"kind":"textbox","id":"sh/ahkv6l8z","slide":6,"text":"锁定并监测","textPreview":"锁定并监测","textChars":5,"textLines":1,"bbox":[98,529,473,31]}
+{"kind":"textbox","id":"sh/xkbe1gra","slide":6,"text":"1200 ms 无完整图片则重新扫描","textPreview":"1200 ms 无完整图片则重新扫描","textChars":18,"textLines":1,"bbox":[98,563,473,30]}
+{"kind":"shape","id":"sh/cj2x8vq5","slide":6,"bbox":[660,247,528,76]}
+{"kind":"textbox","id":"sh/netwv698","slide":6,"text":"寻找目标 END","textPreview":"寻找目标 END","textChars":8,"textLines":1,"bbox":[676,256,496,31]}
+{"kind":"textbox","id":"sh/2d0v218n","slide":6,"text":"绑定后每路 8 ms；RX 发 0x12 请求","textPreview":"绑定后每路 8 ms；RX 发 0x12 请求","textChars":23,"textLines":1,"bbox":[676,290,496,30]}
+{"kind":"textbox","id":"sh/pgbexgre","slide":6,"text":"▼","textPreview":"▼","textChars":1,"textLines":1,"bbox":[910,323,30,16]}
+{"kind":"shape","id":"sh/of2d4bqt","slide":6,"bbox":[660,338,528,76]}
+{"kind":"textbox","id":"sh/fa9wr69c","slide":6,"text":"TX 配合快速广播","textPreview":"TX 配合快速广播","textChars":9,"textLines":1,"bbox":[676,347,496,31]}
+{"kind":"textbox","id":"sh/ep0vy18r","slide":6,"text":"暂停图片，回 0x11；每 8 ms 播 SN，最长 1800 ms","textPreview":"暂停图片，回 0x11；每 8 ms 播 SN，最长 1800 ms","textChars":34,"textLines":1,"bbox":[676,381,496,30]}
+{"kind":"textbox","id":"sh/kje1c32d","slide":6,"text":"▼","textPreview":"▼","textChars":1,"textLines":1,"bbox":[910,414,30,16]}
+{"kind":"shape","id":"sh/54n2l83y","slide":6,"bbox":[660,429,528,76]}
+{"kind":"textbox","id":"sh/ihcjatk7","slide":6,"text":"正式扫描 12 路","textPreview":"正式扫描 12 路","textChars":9,"textLines":1,"bbox":[676,438,496,31]}
+{"kind":"textbox","id":"sh/ji5kjyls","slide":6,"text":"每路 32 ms × 4 轮；只计 CRC / SN 均有效的 0x05","textPreview":"每路 32 ms × 4 轮；只计 CRC / SN 均有效的 0x05","textChars":36,"textLines":1,"bbox":[676,472,496,30]}
+{"kind":"textbox","id":"sh/s7elgn29","slide":6,"text":"▼","textPreview":"▼","textChars":1,"textLines":1,"bbox":[910,505,30,16]}
+{"kind":"shape","id":"sh/t8n2ps3u","slide":6,"bbox":[660,520,528,76]}
+{"kind":"textbox","id":"sh/65w3edkj","slide":6,"text":"排序并锁定","textPreview":"排序并锁定","textChars":5,"textLines":1,"bbox":[676,529,496,31]}
+{"kind":"textbox","id":"sh/765knilo","slide":6,"text":"均值、≥2 样本优先；前三候选依次切换","textPreview":"均值、≥2 样本优先；前三候选依次切换","textChars":19,"textLines":1,"bbox":[676,563,496,30]}
+{"kind":"textbox","id":"sh/8bu14j25","slide":6,"text":"旧版失联：直接回到扫描","textPreview":"旧版失联：直接回到扫描","textChars":11,"textLines":1,"bbox":[82,620,480,28]}
+{"kind":"textbox","id":"sh/9c32do3q","slide":6,"text":"新版失联：先换候选；全部失败再寻 END","textPreview":"新版失联：先换候选；全部失败再寻 END","textChars":20,"textLines":1,"bbox":[660,620,540,28]}
+{"kind":"notes","id":"nt/gp43rf","slide":6,"text":"旧版源码：TYGD31-2.4GHZ/TYGD_RX/Application/antenna.c。ANTENNA_STATUS_SCAN 每3ms轮换12路，扫描函数读 radio_rssi_value>0，36为全局累计样本数；每路记录最小RSSI幅值，选择单一路；ANTENNA_STATUS_DETECT每1200ms无完整图片时回到扫描。新版源码：nrf_rx/examples/peripheral/radio/receiver/antenna_manager.c 与 config.h、nrf_tx/examples/peripheral/radio/TX/image.c 与 config.h。绑定后SEEK_END每路8ms寻找目标END，在TX应答窗口发0x12；TX收到后发0x11并最多1800ms每8ms广播SN；RX正式FAST_SCAN每路32ms、4轮，总1536ms，只统计CRC正确、SN匹配的0x05包；以至少2个样本优先，再比较平均RSSI，保留前三候选。LOCKED中若目标包超时1500ms、完整图超时4000ms或连续3帧失败，先切下一候选，耗尽再SEEK_END。实际无线与移动性能仍需实测。"}
+{"kind":"slide","id":"sl/o9hib6","slide":7,"title":"06  工程重构","textShapes":29}
+{"kind":"textbox","id":"sh/zipcnmdk","slide":7,"text":"06  工程重构","textPreview":"06  工程重构","textChars":8,"textLines":1,"bbox":[70,27,800,25]}
+{"kind":"textbox","id":"sh/0jydwru5","slide":7,"text":"TX / RX 新旧工程整体对比","textPreview":"TX / RX 新旧工程整体对比","textChars":16,"textLines":1,"bbox":[70,68,1140,58]}
+{"kind":"textbox","id":"sh/1k7upwvq","slide":7,"text":"围绕取图、唤醒、等待、空闲和选路，比较代码中的实际实现。","textPreview":"围绕取图、唤醒、等待、空闲和选路，比较代码中的实际实现。","textChars":28,"textLines":1,"bbox":[72,132,1130,47]}
+{"kind":"textbox","id":"sh/qtwbqhw3","slide":7,"text":"转正答辩  /  磁控胶囊内窥镜软件","textPreview":"转正答辩  /  磁控胶囊内窥镜软件","textChars":18,"textLines":1,"bbox":[70,681,760,19]}
+{"kind":"textbox","id":"sh/ru5cjmd8","slide":7,"text":"07","textPreview":"07","textChars":2,"textLines":1,"bbox":[1172,678,42,22]}
+{"kind":"textbox","id":"sh/sfytsret","slide":7,"text":"对比点","textPreview":"对比点","textChars":3,"textLines":1,"bbox":[83,205,165,32]}
+{"kind":"textbox","id":"sh/dg7ulwve","slide":7,"text":"TYGD31 旧工程","textPreview":"TYGD31 旧工程","textChars":10,"textLines":1,"bbox":[292,205,365,32]}
+{"kind":"textbox","id":"sh/ipwbmxwr","slide":7,"text":"当前工程","textPreview":"当前工程","textChars":4,"textLines":1,"bbox":[688,205,492,32]}
+{"kind":"textbox","id":"sh/3q5cf2dc","slide":7,"text":"图片数据","textPreview":"图片数据","textChars":4,"textLines":1,"bbox":[83,246,175,49]}
+{"kind":"textbox","id":"sh/b614fals","slide":7,"text":"整张 JPEG 先复制到 nRF RAM","textPreview":"整张 JPEG 先复制到 nRF RAM","textChars":20,"textLines":1,"bbox":[292,246,360,55]}
+{"kind":"textbox","id":"sh/a5s3654n","slide":7,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[653,248,32,31]}
+{"kind":"textbox","id":"sh/x8jmhk3y","slide":7,"text":"发送 DATA 时按片读 CX93510 帧 RAM","textPreview":"发送 DATA 时按片读 CX93510 帧 RAM","textChars":26,"textLines":1,"bbox":[688,246,500,55]}
+{"kind":"shape","id":"sh/c7al8fmd","slide":7,"bbox":[83,302,1100,0]}
+{"kind":"textbox","id":"sh/zal4jul4","slide":7,"text":"周期唤醒","textPreview":"周期唤醒","textChars":4,"textLines":1,"bbox":[83,316,175,49]}
+{"kind":"textbox","id":"sh/y9c3ap4j","slide":7,"text":"TIMER2 固定周期唤醒；主循环 WFI","textPreview":"TIMER2 固定周期唤醒；主循环 WFI","textChars":21,"textLines":1,"bbox":[292,316,360,55]}
+{"kind":"textbox","id":"sh/lc3ml43a","slide":7,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[653,318,32,31]}
+{"kind":"textbox","id":"sh/kbulczmp","slide":7,"text":"RTC2 产生 500 ms 请求；空闲时 WFE","textPreview":"RTC2 产生 500 ms 请求；空闲时 WFE","textChars":25,"textLines":1,"bbox":[688,316,500,55]}
+{"kind":"shape","id":"sh/fehk7qlk","slide":7,"bbox":[83,372,1100,0]}
+{"kind":"textbox","id":"sh/ed83yl4f","slide":7,"text":"业务等待","textPreview":"业务等待","textChars":4,"textLines":1,"bbox":[83,386,175,49]}
+{"kind":"textbox","id":"sh/itg76ton","slide":7,"text":"拍摄预热和取图轮询使用 delay_ms","textPreview":"拍摄预热和取图轮询使用 delay_ms","textChars":20,"textLines":1,"bbox":[292,386,360,55]}
+{"kind":"textbox","id":"sh/jupofy58","slide":7,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[653,388,32,31]}
+{"kind":"textbox","id":"sh/4vyp83mt","slide":7,"text":"TIMER1 的 1 ms 时基推进预热、分片与 ACK","textPreview":"TIMER1 的 1 ms 时基推进预热、分片与 ACK","textChars":28,"textLines":1,"bbox":[688,386,500,55]}
+{"kind":"shape","id":"sh/5w76h8ne","slide":7,"bbox":[83,442,1100,0]}
+{"kind":"textbox","id":"sh/u5wn2tor","slide":7,"text":"SPI 与帧 RAM","textPreview":"SPI 与帧 RAM","textChars":10,"textLines":1,"bbox":[83,456,175,49]}
+{"kind":"textbox","id":"sh/v65oby5c","slide":7,"text":"SPI0 常开；整图搬走后关闭 PDRAM","textPreview":"SPI0 常开；整图搬走后关闭 PDRAM","textChars":21,"textLines":1,"bbox":[292,456,360,55]}
+{"kind":"textbox","id":"sh/w7ep436x","slide":7,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[653,458,32,31]}
+{"kind":"textbox","id":"sh/h876doni","slide":7,"text":"帧 RAM 保持供分片读取；事务结束关 SPIM0","textPreview":"帧 RAM 保持供分片读取；事务结束关 SPIM0","textChars":25,"textLines":1,"bbox":[688,456,500,55]}
+{"kind":"shape","id":"sh/m1wny9ov","slide":7,"bbox":[83,512,1100,0]}
+{"kind":"textbox","id":"sh/725o7e50","slide":7,"text":"天线选路","textPreview":"天线选路","textChars":4,"textLines":1,"bbox":[83,526,175,49]}
+{"kind":"textbox","id":"sh/pwbadc7i","slide":7,"text":"单次最强 RSSI，锁定一路","textPreview":"单次最强 RSSI，锁定一路","textChars":14,"textLines":1,"bbox":[292,526,360,55]}
+{"kind":"textbox","id":"sh/ov29kr6d","slide":7,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[653,528,32,31]}
+{"kind":"textbox","id":"sh/3utsbmps","slide":7,"text":"目标 SN + CRC 过滤，均值排序，前三候选","textPreview":"目标 SN + CRC 过滤，均值排序，前三候选","textChars":24,"textLines":1,"bbox":[688,526,500,55]}
+{"kind":"shape","id":"sh/2tkrih87","slide":7,"bbox":[83,582,1100,0]}
+{"kind":"textbox","id":"sh/1sbq9c7m","slide":7,"text":"说明：1 ms 时基用于业务调度；芯片初始化及 CX93510 内部轮询仍有短阻塞等待。","textPreview":"说明：1 ms 时基用于业务调度；芯片初始化及 CX93510 内部轮询仍有短阻塞等待。","textChars":44,"textLines":1,"bbox":[83,617,1110,40]}
+{"kind":"notes","id":"nt/o9hib6","slide":7,"text":"依据：TYGD31-2.4GHZ/TYGD_TX/Application/domain.c、image.c、Application/antenna.c，以及当前 nrf_tx/examples/peripheral/radio/TX/main.c、image.c、cx93510.c，nrf_rx/examples/peripheral/radio/receiver/antenna_manager.c，doc/03-TX软件框架.md、doc/07-新旧工程对比.md。旧TX domain在初始化timer2后使用WFI，image_read有delay_ms(1)轮询，旧CX采集前等待25ms；SPI0正常空闲没有禁用，整幅JPEG读入image_buff后可拉低旧板PDRAM。新版RTC2负责低功耗500ms唤醒，TIMER1 1ms活动时基用于预热、分片和ACK的时间戳，主循环WFE；需要逐片读JPEG时保持CX帧RAM供电，图片事务结束关闭nRF SPIM0。不能概括为新版完全没有delay：CX93510初始化和单帧采集轮询仍使用短阻塞nrf_delay_ms。选路差异见上一页。该页只陈述实现差异，不宣称尚未测得的功耗或链路性能改进。"}
+{"kind":"slide","id":"sl/op8cp1","slide":8,"title":"07  法规合规","textShapes":25}
+{"kind":"textbox","id":"sh/dwba14ja","slide":8,"text":"07  法规合规","textPreview":"07  法规合规","textChars":8,"textLines":1,"bbox":[70,27,800,25]}
+{"kind":"textbox","id":"sh/qt0rqp0z","slide":8,"text":"新旧标准差异与变更注册","textPreview":"新旧标准差异与变更注册","textChars":11,"textLines":1,"bbox":[70,68,1140,58]}
+{"kind":"textbox","id":"sh/rut8zu14","slide":8,"text":"关键变化：安全与性能要求升级，注册资料需按新标准重新评估。","textPreview":"关键变化：安全与性能要求升级，注册资料需按新标准重新评估。","textChars":29,"textLines":1,"bbox":[72,132,1130,47]}
+{"kind":"textbox","id":"sh/0z29wji1","slide":8,"text":"转正答辩  /  磁控胶囊内窥镜软件","textPreview":"转正答辩  /  磁控胶囊内窥镜软件","textChars":18,"textLines":1,"bbox":[70,681,760,19]}
+{"kind":"textbox","id":"sh/10ba5ojm","slide":8,"text":"08","textPreview":"08","textChars":2,"textLines":1,"bbox":[1172,678,42,22]}
+{"kind":"textbox","id":"sh/exkru90v","slide":8,"text":"标准更新","textPreview":"标准更新","textChars":4,"textLines":1,"bbox":[82,208,160,25]}
+{"kind":"textbox","id":"sh/zyts3e1g","slide":8,"text":"旧版","textPreview":"旧版","textChars":2,"textLines":1,"bbox":[330,208,300,25]}
+{"kind":"textbox","id":"sh/onm90jix","slide":8,"text":"新版","textPreview":"新版","textChars":2,"textLines":1,"bbox":[650,208,300,25]}
+{"kind":"textbox","id":"sh/9ova9oji","slide":8,"text":"变化重点","textPreview":"变化重点","textChars":4,"textLines":1,"bbox":[960,208,220,25]}
+{"kind":"textbox","id":"sh/94zqtcb2","slide":8,"text":"通用安全","textPreview":"通用安全","textChars":4,"textLines":1,"bbox":[82,252,205,43]}
+{"kind":"textbox","id":"sh/8jqp07ah","slide":8,"text":"GB 9706.1-2007","textPreview":"GB 9706.1-2007","textChars":14,"textLines":1,"bbox":[330,252,290,43]}
+{"kind":"textbox","id":"sh/nih8r2tw","slide":8,"text":"GB 9706.1-2020","textPreview":"GB 9706.1-2020","textChars":14,"textLines":1,"bbox":[650,252,290,50]}
+{"kind":"textbox","id":"sh/mh87yxsr","slide":8,"text":"从基本安全扩展到基本安全＋基本性能","textPreview":"从基本安全扩展到基本安全＋基本性能","textChars":17,"textLines":1,"bbox":[960,252,230,51]}
+{"kind":"shape","id":"sh/x8jqxwbe","slide":8,"bbox":[82,310,1105,0]}
+{"kind":"textbox","id":"sh/w7qp4rat","slide":8,"text":"电磁兼容","textPreview":"电磁兼容","textChars":4,"textLines":1,"bbox":[82,326,205,43]}
+{"kind":"textbox","id":"sh/v6h8vmt8","slide":8,"text":"YY 0505-2012","textPreview":"YY 0505-2012","textChars":12,"textLines":1,"bbox":[330,326,290,43]}
+{"kind":"textbox","id":"sh/a5872hsn","slide":8,"text":"YY 9706.102-2021","textPreview":"YY 9706.102-2021","textChars":16,"textLines":1,"bbox":[650,326,290,50]}
+{"kind":"textbox","id":"sh/dcf6lsbu","slide":8,"text":"按新版 EMC 要求重新评估与验证","textPreview":"按新版 EMC 要求重新评估与验证","textChars":17,"textLines":1,"bbox":[960,326,230,51]}
+{"kind":"shape","id":"sh/cb6psna9","slide":8,"bbox":[82,384,1105,0]}
+{"kind":"textbox","id":"sh/4vap8ni5","slide":8,"text":"风险管理","textPreview":"风险管理","textChars":4,"textLines":1,"bbox":[82,400,205,43]}
+{"kind":"textbox","id":"sh/pwjq1sjq","slide":8,"text":"YY/T 0316-2016","textPreview":"YY/T 0316-2016","textChars":14,"textLines":1,"bbox":[330,400,290,43]}
+{"kind":"textbox","id":"sh/2t876x0f","slide":8,"text":"GB/T 42062-2022\nYY/T 1437-2023 指南","textPreview":"GB/T 42062-2022 | YY/T 1437-2023 指南","textChars":33,"textLines":2,"bbox":[650,400,290,50]}
+{"kind":"textbox","id":"sh/3u18zi1k","slide":8,"text":"更新风险管理依据及过程/记录","textPreview":"更新风险管理依据及过程/记录","textChars":14,"textLines":1,"bbox":[960,400,230,51]}
+{"kind":"shape","id":"sh/czapc7ih","slide":8,"bbox":[82,458,1105,0]}
+{"kind":"textbox","id":"sh/dkjq5cj2","slide":8,"text":"变更注册主线","textPreview":"变更注册主线","textChars":6,"textLines":1,"bbox":[82,495,180,27]}
+{"kind":"textbox","id":"sh/qxs7ax0b","slide":8,"text":"差距分析  →  风险 / 设计更新  →  检验与资料更新  →  变更注册","textPreview":"差距分析  →  风险 / 设计更新  →  检验与资料更新  →  变更注册","textChars":39,"textLines":1,"bbox":[282,493,900,32]}
+{"kind":"textbox","id":"sh/ry18321w","slide":8,"text":"另核对专用标准：GB 9706.218-2021（内窥镜设备）","textPreview":"另核对专用标准：GB 9706.218-2021（内窥镜设备）","textChars":31,"textLines":1,"bbox":[82,547,1090,30]}
+{"kind":"textbox","id":"sh/0nu9g7id","slide":8,"text":"注：具体适用条款、资料范围与期限由法规/注册负责人结合注册单元确认。","textPreview":"注：具体适用条款、资料范围与期限由法规/注册负责人结合注册单元确认。","textChars":34,"textLines":1,"bbox":[82,595,1100,30]}
+{"kind":"notes","id":"nt/op8cp1","slide":8,"text":"用于答辩概述新旧标准迁移，不替代法规评估。差异表只列标准层级的变化方向，不声称逐条条款差异。GB 9706.1-2007已废止，由GB 9706.1-2020替代；YY 0505-2012由YY 9706.102-2021替代。风险管理按用户给定背景：YY/T 0316-2016为原项目采用依据，切换至GB/T 42062-2022及YY/T 1437-2023应用指南；YY/T 1437-2023直接替代的是YY/T 1437-2016。变更注册适用性、注册单元、资料清单与过渡期限须由法规/注册负责人确认；过渡期通用政策详见国家药监局2023年第14号及官方解读。产品专用标准适用性也须确认；“9706.128”未检索到，胶囊内窥镜相关专用标准检索为GB 9706.218-2021。\n\n官方来源：GB 9706.1-2020 https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=74E8A9884B75808BF9369E2E25196F53\nGB 9706.1-2007 https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=6B3CB82E3FD260F2AF530E71D4836D49\nYY 9706.102-2021 https://std.samr.gov.cn/hb/search/stdHBDetailed?id=BFEAFC933D025285E05397BE0A0A7BFB\nGB 9706.218-2021 https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=963619BBF8282C5927A353D689EF4340\nGB/T 42062-2022 https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=1148CB082527B776560903948B22DAB0\nYY/T 1437-2023 https://std.samr.gov.cn/hb/search/stdHBDetailed?id=00D333A21F1A492AE06397BE0A0A2B32\n变更注册过渡政策官方解读 https://yjj.sh.gov.cn/qtgzwj/20230316/8b076216db34470bbcc7e20d6f6ea517.html"}
+{"kind":"slide","id":"sl/7iagy2","slide":9,"title":"08  质量意识","textShapes":20}
+{"kind":"textbox","id":"sh/3a54z21k","slide":9,"text":"08  质量意识","textPreview":"08  质量意识","textChars":8,"textLines":1,"bbox":[70,27,800,25]}
+{"kind":"textbox","id":"sh/obe5s72p","slide":9,"text":"流程文件、验证与可追溯交付","textPreview":"流程文件、验证与可追溯交付","textChars":13,"textLines":1,"bbox":[70,68,1140,58]}
+{"kind":"textbox","id":"sh/pwn61cja","slide":9,"text":"软件实现只是交付的一部分，需求、风险、测试和变更记录也要连起来。","textPreview":"软件实现只是交付的一部分，需求、风险、测试和变更记录也要连起来。","textChars":32,"textLines":1,"bbox":[72,132,1130,47]}
+{"kind":"textbox","id":"sh/u5cnmxkn","slide":9,"text":"转正答辩  /  磁控胶囊内窥镜软件","textPreview":"转正答辩  /  磁控胶囊内窥镜软件","textChars":18,"textLines":1,"bbox":[70,681,760,19]}
+{"kind":"textbox","id":"sh/f6l4vi18","slide":9,"text":"09","textPreview":"09","textChars":2,"textLines":1,"bbox":[1172,678,42,22]}
+{"kind":"shape","id":"sh/g7u5on2t","slide":9,"bbox":[75,267,188,111]}
+{"kind":"textbox","id":"sh/h83mxsje","slide":9,"text":"需求","textPreview":"需求","textChars":2,"textLines":1,"bbox":[87,280,164,36]}
+{"kind":"textbox","id":"sh/61snidkr","slide":9,"text":"来源 / 编号\n[待补]","textPreview":"来源 / 编号 | [待补]","textChars":12,"textLines":2,"bbox":[87,320,164,53]}
+{"kind":"shape","id":"sh/72l4ri1c","slide":9,"bbox":[303,267,188,111]}
+{"kind":"textbox","id":"sh/v6p4zypo","slide":9,"text":"设计","textPreview":"设计","textChars":2,"textLines":1,"bbox":[315,280,164,36]}
+{"kind":"textbox","id":"sh/u5g36t83","slide":9,"text":"接口 / 状态\n[待补]","textPreview":"接口 / 状态 | [待补]","textChars":12,"textLines":2,"bbox":[315,320,164,53]}
+{"kind":"shape","id":"sh/h87m187e","slide":9,"bbox":[531,267,188,111]}
+{"kind":"textbox","id":"sh/g7yl83q9","slide":9,"text":"实现","textPreview":"实现","textChars":2,"textLines":1,"bbox":[543,280,164,36]}
+{"kind":"textbox","id":"sh/3a943ipk","slide":9,"text":"提交 / 评审\n[待补]","textPreview":"提交 / 评审 | [待补]","textChars":12,"textLines":2,"bbox":[543,320,164,53]}
+{"kind":"shape","id":"sh/i903ad8z","slide":9,"bbox":[759,267,188,111]}
+{"kind":"textbox","id":"sh/5wrm587q","slide":9,"text":"验证","textPreview":"验证","textChars":2,"textLines":1,"bbox":[771,280,164,36]}
+{"kind":"textbox","id":"sh/4bilcnq5","slide":9,"text":"用例 / 结果\n[待补]","textPreview":"用例 / 结果 | [待补]","textChars":12,"textLines":2,"bbox":[771,320,164,53]}
+{"kind":"shape","id":"sh/je5krepg","slide":9,"bbox":[987,267,188,111]}
+{"kind":"textbox","id":"sh/ydw3y98v","slide":9,"text":"发布维护","textPreview":"发布维护","textChars":4,"textLines":1,"bbox":[999,280,164,36]}
+{"kind":"textbox","id":"sh/2t476hsj","slide":9,"text":"版本 / 变更\n[待补]","textPreview":"版本 / 变更 | [待补]","textChars":12,"textLines":2,"bbox":[999,320,164,53]}
+{"kind":"shape","id":"sh/nudozm94","slide":9,"bbox":[0,0,0,0]}
+{"kind":"shape","id":"sh/ovmp8ra9","slide":9,"bbox":[0,0,0,0]}
+{"kind":"shape","id":"sh/9wv61wru","slide":9,"bbox":[0,0,0,0]}
+{"kind":"shape","id":"sh/e5kn2hs7","slide":9,"bbox":[0,0,0,0]}
+{"kind":"textbox","id":"sh/fqtovm9s","slide":9,"text":"已梳理资料","textPreview":"已梳理资料","textChars":5,"textLines":1,"bbox":[82,462,180,32]}
+{"kind":"textbox","id":"sh/0r254rad","slide":9,"text":"通信协议、目录结构、TX/RX/STM 软件框架、新旧工程对比。","textPreview":"通信协议、目录结构、TX/RX/STM 软件框架、新旧工程对比。","textChars":32,"textLines":1,"bbox":[266,462,900,35]}
+{"kind":"textbox","id":"sh/1sv6xcry","slide":9,"text":"待补正式证据","textPreview":"待补正式证据","textChars":6,"textLines":1,"bbox":[82,520,180,32]}
+{"kind":"textbox","id":"sh/q1knyxsb","slide":9,"text":"公司流程文件编号、适用标准清单、需求追踪、验证报告、评审和版本记录。","textPreview":"公司流程文件编号、适用标准清单、需求追踪、验证报告、评审和版本记录。","textChars":34,"textLines":1,"bbox":[266,520,930,43]}
+{"kind":"textbox","id":"sh/r2tor29w","slide":9,"text":"当前工程已知边界：STM 图片解析尚无帧静默超时，列入后续风险评估与验证。","textPreview":"当前工程已知边界：STM 图片解析尚无帧静默超时，列入后续风险评估与验证。","textChars":37,"textLines":1,"bbox":[82,595,1090,34]}
+{"kind":"notes","id":"nt/7iagy2","slide":9,"text":"项目仓库已有技术文档，但不能据此推断公司受控的法规标准清单、完整生命周期文档或正式验证已完成。把真实文件名、编号、版本和审核状态填入。软件生命周期要求可参照YY/T 0664-2020理解，系统级确认不应被代码测试替代。"}
+{"kind":"slide","id":"sl/60hud3","slide":10,"title":"09  协作与执行","textShapes":21}
+{"kind":"textbox","id":"sh/6tgby90f","slide":10,"text":"09  协作与执行","textPreview":"09  协作与执行","textChars":9,"textLines":1,"bbox":[70,27,800,25]}
+{"kind":"textbox","id":"sh/tgrutojq","slide":10,"text":"工作方式与职业素养","textPreview":"工作方式与职业素养","textChars":9,"textLines":1,"bbox":[70,68,1140,58]}
+{"kind":"textbox","id":"sh/8fyt0ji5","slide":10,"text":"把五项职业素养落到具体事件，避免只做自我评价。","textPreview":"把五项职业素养落到具体事件，避免只做自我评价。","textChars":23,"textLines":1,"bbox":[72,132,1130,47]}
+{"kind":"textbox","id":"sh/vi9cve1w","slide":10,"text":"转正答辩  /  磁控胶囊内窥镜软件","textPreview":"转正答辩  /  磁控胶囊内窥镜软件","textChars":18,"textLines":1,"bbox":[70,681,760,19]}
+{"kind":"textbox","id":"sh/uh0b2t0b","slide":10,"text":"10","textPreview":"10","textChars":2,"textLines":1,"bbox":[1172,678,42,22]}
+{"kind":"textbox","id":"sh/hkruxoj2","slide":10,"text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[85,220,60,31]}
+{"kind":"textbox","id":"sh/gjit4jih","slide":10,"text":"工作态度","textPreview":"工作态度","textChars":4,"textLines":1,"bbox":[162,220,210,34]}
+{"kind":"textbox","id":"sh/bm5sju1s","slide":10,"text":"[遇到复杂任务时的投入与推进例子]","textPreview":"[遇到复杂任务时的投入与推进例子]","textChars":17,"textLines":1,"bbox":[392,220,770,39]}
+{"kind":"shape","id":"sh/alwbqp07","slide":10,"bbox":[85,265,1085,0]}
+{"kind":"textbox","id":"sh/cr6dkbil","slide":10,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[85,287,60,31]}
+{"kind":"textbox","id":"sh/dcfedgz6","slide":10,"text":"责任心","textPreview":"责任心","textChars":3,"textLines":1,"bbox":[162,287,210,34]}
+{"kind":"textbox","id":"sh/qp4vi10f","slide":10,"text":"[主动发现风险并跟踪到闭环的例子]","textPreview":"[主动发现风险并跟踪到闭环的例子]","textChars":17,"textLines":1,"bbox":[392,287,770,39]}
+{"kind":"shape","id":"sh/bqdwb6h0","slide":10,"bbox":[85,332,1085,0]}
+{"kind":"textbox","id":"sh/0f6dobyh","slide":10,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[85,354,60,31]}
+{"kind":"textbox","id":"sh/lgfehgz2","slide":10,"text":"执行力","textPreview":"执行力","textChars":3,"textLines":1,"bbox":[162,354,210,34]}
+{"kind":"textbox","id":"sh/ydovmlgr","slide":10,"text":"[按计划完成并反馈进度的例子]","textPreview":"[按计划完成并反馈进度的例子]","textChars":15,"textLines":1,"bbox":[392,354,770,39]}
+{"kind":"shape","id":"sh/zexwfqhc","slide":10,"bbox":[85,399,1085,0]}
+{"kind":"textbox","id":"sh/gjmdcrid","slide":10,"text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[85,421,60,31]}
+{"kind":"textbox","id":"sh/1kve5wzy","slide":10,"text":"沟通协调","textPreview":"沟通协调","textChars":4,"textLines":1,"bbox":[162,421,210,34]}
+{"kind":"textbox","id":"sh/x432tonq","slide":10,"text":"[与测试 / 硬件 / 上位机协作案例]","textPreview":"[与测试 / 硬件 / 上位机协作案例]","textChars":20,"textLines":1,"bbox":[392,421,770,39]}
+{"kind":"shape","id":"sh/w3ul0j65","slide":10,"bbox":[85,466,1085,0]}
+{"kind":"textbox","id":"sh/v2lkre5k","slide":10,"text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[85,488,60,31]}
+{"kind":"textbox","id":"sh/a1s3y9oz","slide":10,"text":"团队协作","textPreview":"团队协作","textChars":4,"textLines":1,"bbox":[162,488,210,34]}
+{"kind":"textbox","id":"sh/5832xonm","slide":10,"text":"[分工、互相支持与共同交付案例]","textPreview":"[分工、互相支持与共同交付案例]","textChars":16,"textLines":1,"bbox":[392,488,770,39]}
+{"kind":"shape","id":"sh/k7ul4361","slide":10,"bbox":[85,533,1085,0]}
+{"kind":"textbox","id":"sh/j6lkvy5g","slide":10,"text":"专项任务：[任务背景]  /  [本人负责]  /  [交付时间]  /  [结果或复盘]","textPreview":"专项任务：[任务背景]  /  [本人负责]  /  [交付时间]  /  [结果或复盘]","textChars":45,"textLines":1,"bbox":[85,589,1090,40]}
+{"kind":"notes","id":"nt/60hud3","slide":10,"text":"对应职业素养的五项评分标准和10%的专项任务权重。请使用真实事件，写明时间、协作对象、个人责任、反馈方式和可验证结果。"}
+{"kind":"slide","id":"sl/2bpc3z","slide":11,"title":"10  工作回顾","textShapes":21}
+{"kind":"textbox","id":"sh/ulg3ip0f","slide":11,"text":"10  工作回顾","textPreview":"10  工作回顾","textChars":8,"textLines":1,"bbox":[70,27,800,25]}
+{"kind":"textbox","id":"sh/hor2t4jq","slide":11,"text":"试用期工作主线","textPreview":"试用期工作主线","textChars":7,"textLines":1,"bbox":[70,68,1140,58]}
+{"kind":"textbox","id":"sh/gnilkzi5","slide":11,"text":"项目任务以外，重点呈现个人负责范围、交付证据和协作过程。","textPreview":"项目任务以外，重点呈现个人负责范围、交付证据和协作过程。","textChars":28,"textLines":1,"bbox":[72,132,1130,47]}
+{"kind":"textbox","id":"sh/3q94ve1w","slide":11,"text":"转正答辩  /  磁控胶囊内窥镜软件","textPreview":"转正答辩  /  磁控胶囊内窥镜软件","textChars":18,"textLines":1,"bbox":[70,681,760,19]}
+{"kind":"textbox","id":"sh/2p03m90b","slide":11,"text":"11","textPreview":"11","textChars":2,"textLines":1,"bbox":[1172,678,42,22]}
+{"kind":"textbox","id":"sh/psrmx4j2","slide":11,"text":"工作内容","textPreview":"工作内容","textChars":4,"textLines":1,"bbox":[80,218,300,38]}
+{"kind":"textbox","id":"sh/4rilozih","slide":11,"text":"本人承担与交付","textPreview":"本人承担与交付","textChars":7,"textLines":1,"bbox":[428,218,340,38]}
+{"kind":"textbox","id":"sh/ret4ze1s","slide":11,"text":"证明材料","textPreview":"证明材料","textChars":4,"textLines":1,"bbox":[850,218,280,38]}
+{"kind":"textbox","id":"sh/qt03q90n","slide":11,"text":"熟悉产品与代码","textPreview":"熟悉产品与代码","textChars":7,"textLines":1,"bbox":[80,277,300,40]}
+{"kind":"textbox","id":"sh/0fu5gz6p","slide":11,"text":"[负责模块 / 关键流程 / 上手成果]","textPreview":"[负责模块 / 关键流程 / 上手成果]","textChars":20,"textLines":1,"bbox":[428,277,400,46]}
+{"kind":"textbox","id":"sh/1g36p4na","slide":11,"text":"[交接资料 / 学习记录]","textPreview":"[交接资料 / 学习记录]","textChars":13,"textLines":1,"bbox":[850,277,340,46]}
+{"kind":"shape","id":"sh/edcnepoj","slide":11,"bbox":[80,328,1100,0]}
+{"kind":"textbox","id":"sh/felonu54","slide":11,"text":"开发与问题闭环","textPreview":"开发与问题闭环","textChars":7,"textLines":1,"bbox":[80,348,300,40]}
+{"kind":"textbox","id":"sh/o3u5kz6l","slide":11,"text":"[功能迭代 / 缺陷定位 / 修复结果]","textPreview":"[功能迭代 / 缺陷定位 / 修复结果]","textChars":20,"textLines":1,"bbox":[428,348,400,46]}
+{"kind":"textbox","id":"sh/94n6t4n6","slide":11,"text":"[提交 / 缺陷单 / 评审]","textPreview":"[提交 / 缺陷单 / 评审]","textChars":15,"textLines":1,"bbox":[850,348,340,46]}
+{"kind":"shape","id":"sh/m1cnipov","slide":11,"bbox":[80,399,1100,0]}
+{"kind":"textbox","id":"sh/n2loru50","slide":11,"text":"验证与跨团队配合","textPreview":"验证与跨团队配合","textChars":8,"textLines":1,"bbox":[80,419,300,40]}
+{"kind":"textbox","id":"sh/w7e5oj6x","slide":11,"text":"[联调、验证支持、问题同步]","textPreview":"[联调、验证支持、问题同步]","textChars":14,"textLines":1,"bbox":[428,419,400,46]}
+{"kind":"textbox","id":"sh/x8n6xoni","slide":11,"text":"[测试记录 / 协作案例]","textPreview":"[测试记录 / 协作案例]","textChars":13,"textLines":1,"bbox":[850,419,340,46]}
+{"kind":"shape","id":"sh/5oj614fm","slide":11,"bbox":[80,470,1100,0]}
+{"kind":"textbox","id":"sh/kna58zy1","slide":11,"text":"专项任务","textPreview":"专项任务","textChars":4,"textLines":1,"bbox":[80,490,300,40]}
+{"kind":"textbox","id":"sh/jm1ozexg","slide":11,"text":"[任务名称、时限、结果]","textPreview":"[任务名称、时限、结果]","textChars":12,"textLines":1,"bbox":[428,490,400,46]}
+{"kind":"textbox","id":"sh/ilsn69gv","slide":11,"text":"[任务记录 / 汇报记录]","textPreview":"[任务记录 / 汇报记录]","textChars":13,"textLines":1,"bbox":[850,490,340,46]}
+{"kind":"shape","id":"sh/ts365ofi","slide":11,"bbox":[80,541,1100,0]}
+{"kind":"textbox","id":"sh/sru5cjex","slide":11,"text":"答辩建议：每件事按“背景 → 本人动作 → 验证证据 → 结果/复盘”讲清楚。","textPreview":"答辩建议：每件事按“背景 → 本人动作 → 验证证据 → 结果/复盘”讲清楚。","textChars":39,"textLines":1,"bbox":[82,594,1090,41]}
+{"kind":"notes","id":"nt/2bpc3z","slide":11,"text":"根据本人真实试用期工作填写此页。最好选择两到三个最能说明能力的案例，避免只说“参与了”“完成了”，需要讲清本人负责内容和证据。此页已从第3页移至总结前，作为答辩内容的最后一页。"}
+{"kind":"slide","id":"sl/1mfrbc","slide":12,"title":"总结与下一阶段","textShapes":5}
+{"kind":"textbox","id":"sh/pcvqdgj2","slide":12,"text":"总结与下一阶段","textPreview":"总结与下一阶段","textChars":7,"textLines":1,"bbox":[78,71,960,43]}
+{"kind":"textbox","id":"sh/29kri10r","slide":12,"text":"从系统理解到\n可追溯交付","textPreview":"从系统理解到 | 可追溯交付","textChars":12,"textLines":2,"bbox":[78,166,990,147]}
+{"kind":"textbox","id":"sh/nat8b61c","slide":12,"text":"下一阶段重点","textPreview":"下一阶段重点","textChars":6,"textLines":1,"bbox":[84,387,230,34]}
+{"kind":"textbox","id":"sh/0729gril","slide":12,"text":"补齐链路与移动场景验证；完善异常恢复和回归测试；按流程沉淀需求、风险和验证记录。","textPreview":"补齐链路与移动场景验证；完善异常恢复和回归测试；按流程沉淀需求、风险和验证记录。","textChars":40,"textLines":1,"bbox":[84,438,1070,76]}
+{"kind":"textbox","id":"sh/18bq9wj6","slide":12,"text":"申请转正  /  [本人补充一句具体承诺]","textPreview":"申请转正  /  [本人补充一句具体承诺]","textChars":21,"textLines":1,"bbox":[84,576,1040,42]}
+{"kind":"notes","id":"nt/1mfrbc","slide":12,"text":"结尾请补充你愿意承担的下一阶段具体职责和可检查目标。避免承诺尚未评估过的量化指标。"}
