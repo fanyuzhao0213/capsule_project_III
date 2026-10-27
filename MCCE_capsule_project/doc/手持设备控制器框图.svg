@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">手持设备控制器模块框图</title>
+  <desc id="desc">3.7V电池为手持设备供电。SW1、SW2和TIM4连接STM8S103F2P6；STM8通过UART1连接HC-04S蓝牙模块，SW2每次有效按下发送一次命令。PD3为SW1控制输出。PC5、PC6外部用途待硬件图纸确认。</desc>
+  <defs>
+    <style>
+      .bg{fill:#f8fbfc}.board{fill:#edf6f8;stroke:#a9cad1;stroke-width:2}.box{fill:#fff;stroke:#9ab7c0;stroke-width:2}.core{fill:#d9eef2;stroke:#087f91;stroke-width:3}.txt{font-family:"Microsoft YaHei","Noto Sans CJK SC",sans-serif;fill:#143747;font-size:19px}.title{font-size:29px;font-weight:700}.head{font-size:22px;font-weight:700}.small{font-size:16px;fill:#4d6c78}.line{stroke:#078394;stroke-width:3;fill:none;marker-end:url(#arrow)}.return{stroke:#078394;stroke-width:2;fill:none;marker-end:url(#arrow)}.wire{stroke:#b96a25;stroke-width:3;fill:none;marker-end:url(#arrow2)}
+    </style>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="#078394"/></marker>
+    <marker id="arrow2" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="#b96a25"/></marker>
+  </defs>
+  <rect class="bg" width="1200" height="520"/>
+  <text class="txt title" x="46" y="54">手持设备控制器｜STM8S103F2P6 → HC-04S → PC</text>
+  <rect class="board" x="35" y="91" width="838" height="380" rx="18"/>
+  <text class="txt head" x="58" y="126">手持设备板</text>
+  <rect class="box" x="63" y="153" width="185" height="66" rx="10"/>
+  <text class="txt head" x="86" y="181">SW1 按键</text><text class="txt small" x="86" y="205">PC3 · 下降沿</text>
+  <rect class="box" x="63" y="245" width="185" height="66" rx="10"/>
+  <text class="txt head" x="86" y="273">SW2 按键</text><text class="txt small" x="86" y="297">PC4 · 下降沿</text>
+  <rect class="box" x="63" y="337" width="185" height="66" rx="10"/>
+  <text class="txt head" x="86" y="365">3.7 V 电池</text><text class="txt small" x="86" y="389">容量待电路图确认</text>
+  <rect class="core" x="335" y="172" width="244" height="198" rx="15"/>
+  <text class="txt head" x="358" y="211">STM8S103F2P6</text>
+  <text class="txt small" x="359" y="245">HSI 16 MHz</text>
+  <text class="txt small" x="359" y="275">TIM4：1 ms Tick</text>
+  <text class="txt small" x="359" y="305">按键消抖：20 ms</text>
+  <text class="txt small" x="359" y="335">UART1：9600 8N1</text>
+  <path class="line" d="M248 186 H330"/><path class="line" d="M248 278 H330"/><path class="line" d="M248 370 H286 V344 H330"/>
+  <rect class="box" x="655" y="172" width="184" height="121" rx="12"/>
+  <text class="txt head" x="680" y="210">HC-04S</text><text class="txt small" x="680" y="237">蓝牙串口模块</text><text class="txt small" x="680" y="263">名称 ZAYS-001</text>
+  <path class="line" d="M579 229 H648"/><path class="return" d="M650 265 H585"/>
+  <text class="txt small" x="585" y="201">PD5 TX →</text><text class="txt small" x="586" y="289">← PD6 RX</text>
+  <rect class="box" x="650" y="338" width="190" height="66" rx="10"/>
+  <text class="txt small" x="668" y="365">PD3：SW1按住为高</text><text class="txt small" x="668" y="389">PC5高 / PC6低</text>
+  <path class="line" d="M579 349 H644"/>
+  <text class="txt small" x="393" y="442">输出负载与 PC5/PC6 用途需结合原理图确认</text>
+  <rect class="box" x="965" y="172" width="195" height="151" rx="12"/>
+  <text class="txt head" x="1003" y="212">PC 对端</text>
+  <text class="txt small" x="987" y="246">接收固定 9 字节</text>
+  <text class="txt small" x="987" y="274">照片保存由 PC 执行</text>
+  <text class="txt small" x="987" y="300">本工程无业务确认</text>
+  <path class="wire" d="M839 231 H957"/>
+  <text class="txt small" x="864" y="203">蓝牙无线链路</text>
+  <text class="txt small" x="888" y="367">SW2 → 固定9 B，每次有效按下发送1次</text>
+</svg>

@@ -1,0 +1,23 @@
+# Keil build output
+MDK-ARM/stm_project/
+MDK-ARM/Objects/
+MDK-ARM/Listings/
+MDK-ARM/*.axf
+MDK-ARM/*.hex
+MDK-ARM/*.bin
+MDK-ARM/*.map
+MDK-ARM/*.lst
+MDK-ARM/*.log
+MDK-ARM/*.uvguix.*
+MDK-ARM/JLinkLog.txt
+MDK-ARM/JLinkSettings.ini
+
+# Editor and operating-system files
+.vscode/
+.idea/
+*.user
+*.tmp
+*.bak
+*~
+Thumbs.db
+.DS_Store
